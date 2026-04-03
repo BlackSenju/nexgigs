@@ -2,6 +2,7 @@
 
 import { CheckCircle, Zap, Crown, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import { cn } from "@/lib/utils";
 
 const TIERS = [
@@ -50,6 +51,7 @@ const TIERS = [
 export default function SubscriptionPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/profile/me" />
       <h1 className="text-xl font-black text-white mb-1">Upgrade Your Plan</h1>
       <p className="text-sm text-zinc-400 mb-6">
         Earn more, get seen first, and keep more of what you make.

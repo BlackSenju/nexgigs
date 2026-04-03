@@ -2,6 +2,7 @@
 
 import { Search, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/ui/back-button";
 
 const SAMPLE_ITEMS = [
   { id: "s1", title: "Custom Logo Package", seller: "Marcus J.", price: 150, category: "Digital", sold: 12 },
@@ -15,6 +16,7 @@ const SAMPLE_ITEMS = [
 export default function ShopPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-black text-white">Shop</h1>
         <Link

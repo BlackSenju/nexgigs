@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import { Users, Star, MapPin, Briefcase, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -50,6 +51,7 @@ const SAMPLE_GUILDS = [
 export default function GuildsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-black text-white">Guilds</h1>
         <Button size="sm">

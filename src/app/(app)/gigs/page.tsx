@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { MapPin, Clock, CheckCircle, Briefcase, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
@@ -57,6 +58,7 @@ export default function MyGigsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       <h1 className="text-xl font-black text-white mb-4">My Gigs</h1>
 
       {/* Tabs */}

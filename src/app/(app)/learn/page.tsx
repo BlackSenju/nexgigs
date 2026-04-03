@@ -2,6 +2,7 @@
 
 import { Search, Star, User, Video } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/ui/back-button";
 
 const SAMPLE_TUTORS = [
   {
@@ -49,6 +50,7 @@ const SAMPLE_TUTORS = [
 export default function LearnPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       <h1 className="text-xl font-black text-white mb-1">Learn</h1>
       <p className="text-sm text-zinc-400 mb-4">
         Find tutors and learn new skills from people in your community.

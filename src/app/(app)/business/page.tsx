@@ -2,6 +2,7 @@
 
 import { Building2, Users, FileText, CreditCard, TrendingUp, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 
 const BUSINESS_TIERS = [
   {
@@ -25,6 +26,7 @@ const BUSINESS_TIERS = [
 export default function BusinessPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       <div className="flex items-center gap-3 mb-2">
         <Building2 className="w-6 h-6 text-brand-orange" />
         <h1 className="text-xl font-black text-white">NexGigs for Business</h1>

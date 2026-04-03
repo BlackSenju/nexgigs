@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Ghost, Flag } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 
 const SAMPLE_GHOSTS = [
   {
@@ -32,6 +33,7 @@ const SAMPLE_GHOSTS = [
 export default function GhostWallPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
+      <BackButton fallbackHref="/dashboard" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <Ghost className="w-6 h-6 text-brand-red" />
