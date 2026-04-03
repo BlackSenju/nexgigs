@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { JobCard, type JobCardData } from "@/components/jobs/job-card";
 import { JobFilters } from "@/components/jobs/job-filters";
-import { MapPin, Search, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2, List, Map as MapIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
+const JobMap = lazy(() =>
+  import("@/components/jobs/job-map").then((mod) => ({ default: mod.JobMap }))
+);
 
 export default function JobFeedPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -13,6 +18,7 @@ export default function JobFeedPage() {
   const [loading, setLoading] = useState(true);
   const [userCity, setUserCity] = useState("Milwaukee");
   const [userState, setUserState] = useState("WI");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -24,6 +30,7 @@ export default function JobFeedPage() {
         id, title, description, category, city, neighborhood,
         price, price_min, price_max, hourly_rate, duration_type,
         is_urgent, is_remote, applications_count, created_at,
+        latitude, longitude,
         poster:nexgigs_profiles!poster_id(first_name, last_initial)
       `)
       .eq("status", "open")
@@ -57,6 +64,8 @@ export default function JobFeedPage() {
         duration_type: job.duration_type as string,
         is_urgent: job.is_urgent as boolean | undefined,
         is_remote: job.is_remote as boolean | undefined,
+        latitude: job.latitude as number | undefined,
+        longitude: job.longitude as number | undefined,
         poster_name: poster
           ? `${poster.first_name} ${poster.last_initial}.`
           : "Anonymous",
@@ -104,9 +113,31 @@ export default function JobFeedPage() {
           </span>
           <span className="text-xs text-zinc-500">10 mi</span>
         </div>
-        <span className="text-xs text-zinc-500">
-          {loading ? "..." : `${jobs.length} gigs nearby`}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500">
+            {loading ? "..." : `${jobs.length} gigs`}
+          </span>
+          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "p-1.5 transition-colors",
+                viewMode === "list" ? "bg-brand-orange text-white" : "text-zinc-400 hover:text-white"
+              )}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={cn(
+                "p-1.5 transition-colors",
+                viewMode === "map" ? "bg-brand-orange text-white" : "text-zinc-400 hover:text-white"
+              )}
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -125,6 +156,26 @@ export default function JobFeedPage() {
       <div className="mb-4">
         <JobFilters selected={selectedCategory} onSelect={setSelectedCategory} />
       </div>
+
+      {/* Map view */}
+      {viewMode === "map" && (
+        <div className="mb-4 h-80 sm:h-96">
+          <Suspense
+            fallback={
+              <div className="w-full h-full rounded-xl bg-card border border-zinc-800 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+              </div>
+            }
+          >
+            <JobMap
+              jobs={jobs}
+              onJobClick={(id) => {
+                window.location.href = `/jobs/${id}`;
+              }}
+            />
+          </Suspense>
+        </div>
+      )}
 
       {/* Job list */}
       {loading ? (

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
+import { geocodeAddress } from "@/lib/geocode";
 
 export async function getJobs(filters?: {
   category?: string;
@@ -142,6 +143,10 @@ export async function createJob(input: {
     .eq("id", user.id)
     .single();
 
+  // Geocode the location to get lat/lng
+  const geoQuery = `${input.zipCode} ${input.city} ${input.state}`;
+  const geo = await geocodeAddress(geoQuery);
+
   const { data: job, error } = await supabase
     .from("nexgigs_jobs")
     .insert({
@@ -159,7 +164,9 @@ export async function createJob(input: {
       city: input.city,
       state: input.state.toUpperCase(),
       zip_code: input.zipCode,
-      neighborhood: input.neighborhood,
+      neighborhood: input.neighborhood || geo?.neighborhood,
+      latitude: geo?.latitude,
+      longitude: geo?.longitude,
       is_remote: input.isRemote ?? false,
       requires_license: input.requiresLicense ?? false,
       requires_background_check: input.requiresBackgroundCheck ?? false,

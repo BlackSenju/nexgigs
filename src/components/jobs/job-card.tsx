@@ -17,6 +17,8 @@ export interface JobCardData {
   duration_type: string;
   is_urgent?: boolean;
   is_remote?: boolean;
+  latitude?: number;
+  longitude?: number;
   poster_name: string;
   poster_rating?: number;
   created_at: string;
