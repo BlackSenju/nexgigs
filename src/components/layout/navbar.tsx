@@ -4,15 +4,27 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
+import { LogOut } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function Navbar() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<{ avatar_url?: string; first_name?: string; last_initial?: string } | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user) {
+        supabase
+          .from("nexgigs_profiles")
+          .select("avatar_url, first_name, last_initial")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: p }) => setProfile(p));
+      }
+    });
 
     const {
       data: { subscription },
@@ -63,13 +75,17 @@ export function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
-                <Link href="/profile/me" title="My Profile">
-                  <Button variant="ghost" size="sm" className="relative group">
-                    <User className="w-4 h-4" />
-                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-zinc-800 text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      My Profile
-                    </span>
-                  </Button>
+                <Link href="/profile/me" title="My Profile" className="relative group">
+                  <Avatar
+                    src={profile?.avatar_url}
+                    firstName={profile?.first_name}
+                    lastInitial={profile?.last_initial}
+                    size="sm"
+                    className="hover:ring-2 hover:ring-brand-orange/50 transition-all cursor-pointer"
+                  />
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-zinc-800 text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    My Profile
+                  </span>
                 </Link>
                 <button onClick={handleLogout} title="Log Out" className="relative group inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:text-white hover:bg-card transition-colors">
                   <LogOut className="w-4 h-4" />
