@@ -58,7 +58,8 @@
       "Bash(ssh alucard@192.168.1.65 \"openclaw update --yes 2>&1\")",
       "Bash(ssh alucard@192.168.1.65 \"sudo npm i -g openclaw@latest 2>&1 | tail -5\")",
       "mcp__Stripe__list_products",
-      "Bash(ssh alucard@192.168.1.65 \"cat /home/alucard/.secrets/stripe_secret_key | head -c 10 && echo ''...''\")"
+      "Bash(ssh alucard@192.168.1.65 \"cat /home/alucard/.secrets/stripe_secret_key | head -c 10 && echo ''...''\")",
+      "Bash(ssh alucard@192.168.1.65 \"grep -r ''pk_live\\\\|STRIPE_PUBLISHABLE\\\\|NEXT_PUBLIC_STRIPE'' /home/alucard/ --include=''*.env*'' --include=''*.local'' --include=''*.json'' 2>/dev/null | head -10\")"
     ]
   }
 }

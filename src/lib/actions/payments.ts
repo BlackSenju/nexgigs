@@ -10,6 +10,7 @@ import {
 import { calculateFees } from "@/lib/constants";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
+import { awardXP, checkMilestones } from "@/lib/actions/xp";
 
 /**
  * Hire a gigger for a job — creates hired_job record and authorizes payment.
@@ -191,6 +192,24 @@ export async function completeJob(hiredJobId: string) {
       .eq("id", hiredJob.job_id);
 
     const jobTitle = (hiredJob.job as Record<string, unknown>)?.title ?? "Unknown";
+
+    // Award XP to gigger for completing the gig
+    awardXP(hiredJob.gigger_id, "gig_complete", hiredJob.job_id).catch(() => {});
+    checkMilestones(hiredJob.gigger_id).catch(() => {});
+
+    // Update gigger earnings
+    const { data: currentXp } = await supabase
+      .from("nexgigs_user_xp")
+      .select("total_earned")
+      .eq("user_id", hiredJob.gigger_id)
+      .single();
+
+    await supabase
+      .from("nexgigs_user_xp")
+      .update({
+        total_earned: (Number(currentXp?.total_earned) || 0) + Number(hiredJob.agreed_price),
+      })
+      .eq("user_id", hiredJob.gigger_id);
 
     Promise.all([
       notifyDiscord("job_completed", {
