@@ -42,13 +42,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages and landing page
   const authRoutes = ["/login", "/signup"];
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
+  const isLandingPage = request.nextUrl.pathname === "/";
 
-  if (isAuthRoute && user) {
+  if ((isAuthRoute || isLandingPage) && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
