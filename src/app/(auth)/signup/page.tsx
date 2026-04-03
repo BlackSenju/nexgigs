@@ -7,6 +7,8 @@ import { signupSchema, type SignupInput } from "@/lib/validations/auth";
 import { signup } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StateSelect } from "@/components/ui/state-select";
+import { CityInput } from "@/components/ui/city-input";
 import { Hammer, Briefcase, ArrowLeft } from "lucide-react";
 import { GoogleButton } from "@/components/ui/google-button";
 import Link from "next/link";
@@ -20,6 +22,8 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -160,36 +164,36 @@ export default function SignupPage() {
             {...register("password")}
           />
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-1">
-              <Input
-                id="city"
-                label="City"
-                placeholder="Milwaukee"
-                error={errors.city?.message}
-                {...register("city")}
-              />
-            </div>
-            <div>
-              <Input
-                id="state"
-                label="State"
-                placeholder="WI"
-                maxLength={2}
-                error={errors.state?.message}
-                {...register("state")}
-              />
-            </div>
-            <div>
-              <Input
-                id="zipCode"
-                label="Zip Code"
-                placeholder="53202"
-                maxLength={5}
-                error={errors.zipCode?.message}
-                {...register("zipCode")}
-              />
-            </div>
+          <CityInput
+            id="city"
+            label="City"
+            value={watch("city") ?? ""}
+            onChange={(val) => setValue("city", val, { shouldValidate: true })}
+            onSelect={(result) => {
+              if (result.state) setValue("state", result.state, { shouldValidate: true });
+              if (result.zipCode) setValue("zipCode", result.zipCode, { shouldValidate: true });
+            }}
+            state={watch("state")}
+            error={errors.city?.message}
+            placeholder="Start typing your city..."
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <StateSelect
+              id="state"
+              label="State"
+              value={watch("state") ?? ""}
+              onChange={(val) => setValue("state", val, { shouldValidate: true })}
+              error={errors.state?.message}
+            />
+            <Input
+              id="zipCode"
+              label="Zip Code"
+              placeholder="53202"
+              maxLength={5}
+              error={errors.zipCode?.message}
+              {...register("zipCode")}
+            />
           </div>
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StateSelect } from "@/components/ui/state-select";
+import { CityInput } from "@/components/ui/city-input";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { createJob } from "@/lib/actions/jobs";
 import {
@@ -251,19 +253,24 @@ export default function PostJobPage() {
       {step === 2 && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white">Where is this job?</h2>
-          <Input
+          <CityInput
             id="city"
             label="City"
             value={form.city}
-            onChange={(e) => updateForm({ city: e.target.value })}
+            onChange={(val) => updateForm({ city: val })}
+            onSelect={(result) => {
+              if (result.state) updateForm({ state: result.state });
+              if (result.zipCode) updateForm({ zipCode: result.zipCode });
+            }}
+            state={form.state}
+            placeholder="Start typing a city..."
           />
           <div className="grid grid-cols-2 gap-3">
-            <Input
+            <StateSelect
               id="state"
               label="State"
               value={form.state}
-              maxLength={2}
-              onChange={(e) => updateForm({ state: e.target.value })}
+              onChange={(val) => updateForm({ state: val })}
             />
             <Input
               id="zipCode"
