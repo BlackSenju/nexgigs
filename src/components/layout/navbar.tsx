@@ -33,7 +33,10 @@ export function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800 bg-background/80 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="text-xl font-black text-brand-orange">
+          <Link
+            href={user ? "/dashboard" : "/"}
+            className="text-xl font-black text-brand-orange"
+          >
             NexGigs
           </Link>
 
@@ -60,14 +63,20 @@ export function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
-                <Link href="/profile/me">
-                  <Button variant="ghost" size="sm">
+                <Link href="/profile/me" title="My Profile">
+                  <Button variant="ghost" size="sm" className="relative group">
                     <User className="w-4 h-4" />
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-zinc-800 text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      My Profile
+                    </span>
                   </Button>
                 </Link>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <button onClick={handleLogout} title="Log Out" className="relative group inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:text-white hover:bg-card transition-colors">
                   <LogOut className="w-4 h-4" />
-                </Button>
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-zinc-800 text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    Log Out
+                  </span>
+                </button>
               </>
             ) : (
               <>

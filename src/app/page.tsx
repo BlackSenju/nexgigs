@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import {
@@ -55,7 +57,11 @@ const HOW_IT_WORKS = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Redirect authenticated users to dashboard
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
