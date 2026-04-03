@@ -71,3 +71,18 @@ export function calculateFees(
   const platformEarns = amount * posterServiceFee + amount * giggerCommission;
   return { posterPays, giggerReceives, platformEarns };
 }
+
+export const SKILL_SUGGESTIONS: Record<string, string[]> = {
+  "Home & Yard": ["Lawn mowing", "Snow shoveling", "Pressure washing", "Painting", "Hauling", "Furniture assembly", "TV mounting", "Moving help", "Cleaning", "Handyman"],
+  "Personal Errands": ["Grocery shopping", "Package pickup", "Line waiting", "Personal shopping", "Pet sitting", "Dog walking", "Babysitting", "Childcare"],
+  "Creative & Digital": ["Photography", "Videography", "Graphic design", "Beat making", "Music production", "Mural art", "Face painting", "Video editing", "Social media management", "Content creation", "Logo design", "Web design"],
+  "Events": ["DJ", "MC", "Event setup", "Catering assist", "Decoration", "Valet coordination"],
+  "Food & Cooking": ["Personal chef", "Meal prep", "Baking", "Cooking lessons", "Catering"],
+  "Tech Help": ["Computer setup", "Smart home install", "WiFi setup", "Virus removal", "Website help", "Phone repair"],
+  "Auto & Vehicle": ["Detailing", "Oil change", "Tire change", "Battery replacement", "Basic diagnostics"],
+  "Hair & Beauty": ["Haircuts", "Styling", "Nails", "Lash extensions", "Waxing", "Braiding"],
+  "Fitness & Wellness": ["Personal training", "Yoga", "Dance lessons", "Martial arts", "Sports coaching"],
+  "Transportation": ["Carpooling", "Airport rides", "Medical transport", "Designated driver"],
+  "Tutoring": ["Technology & IT", "Academic tutoring", "Creative arts", "Business skills", "Music lessons", "Language tutoring"],
+  "Trades (Licensed)": ["Electrical", "Plumbing", "HVAC", "General contracting"],
+};

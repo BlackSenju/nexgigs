@@ -3,27 +3,28 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
+import { Combobox } from "@/components/ui/combobox";
+import { StateSelect } from "@/components/ui/state-select";
+import { CityInput } from "@/components/ui/city-input";
 import { createClient } from "@/lib/supabase/client";
 import { uploadAvatar, uploadPortfolioItem, deletePortfolioItem } from "@/lib/actions/uploads";
+import { addSkill, removeSkill, updateProfile } from "@/lib/actions/profile";
+import { SERVICE_CATEGORIES, SKILL_SUGGESTIONS } from "@/lib/constants";
 import {
-  MapPin,
-  Shield,
-  Award,
-  Settings,
-  Camera,
-  Plus,
-  Edit3,
-  Loader2,
-  Trash2,
-  X,
+  MapPin, Shield, Award, Settings, Camera, Plus, Edit3,
+  Loader2, Trash2, X, Star, Briefcase, Zap, ChevronRight,
+  CheckCircle, CreditCard,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function MyProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [showSkillForm, setShowSkillForm] = useState(false);
   const [showPortfolioForm, setShowPortfolioForm] = useState(false);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [skills, setSkills] = useState<Array<Record<string, unknown>>>([]);
@@ -33,10 +34,25 @@ export default function MyProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
 
+  // Skill form state
+  const [newSkillName, setNewSkillName] = useState("");
+  const [newSkillCategory, setNewSkillCategory] = useState("");
+  const [newSkillYears, setNewSkillYears] = useState("");
+
   // Portfolio form state
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDescription, setPortfolioDescription] = useState("");
   const [portfolioCategory, setPortfolioCategory] = useState("");
+
+  // Edit form state
+  const [editBio, setEditBio] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editNeighborhood, setEditNeighborhood] = useState("");
+
+  const currentCategorySkills = newSkillCategory
+    ? (SKILL_SUGGESTIONS[newSkillCategory] ?? []).map((s) => ({ value: s, label: s }))
+    : [];
 
   useEffect(() => {
     async function load() {
@@ -57,6 +73,13 @@ export default function MyProfilePage() {
       setPortfolio(portfolioRes.data ?? []);
       setXp(xpRes.data);
       setRating(ratingRes.data);
+
+      if (profileRes.data) {
+        setEditBio(String(profileRes.data.bio ?? ""));
+        setEditCity(String(profileRes.data.city ?? ""));
+        setEditState(String(profileRes.data.state ?? ""));
+        setEditNeighborhood(String(profileRes.data.neighborhood ?? ""));
+      }
       setLoading(false);
     }
     load();
@@ -65,29 +88,44 @@ export default function MyProfilePage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
-
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-
     const result = await uploadAvatar(formData);
-    if (result.avatarUrl) {
-      setProfile({ ...profile, avatar_url: result.avatarUrl });
-    }
+    if (result.avatarUrl) setProfile({ ...profile, avatar_url: result.avatarUrl });
     setUploading(false);
+  }
+
+  async function handleAddSkill() {
+    if (!newSkillName || !newSkillCategory) return;
+    const result = await addSkill({
+      skillName: newSkillName,
+      category: newSkillCategory,
+      experienceYears: newSkillYears ? Number(newSkillYears) : 0,
+    });
+    if (result.skill) {
+      setSkills([...skills, result.skill]);
+      setNewSkillName("");
+      setNewSkillCategory("");
+      setNewSkillYears("");
+      setShowSkillForm(false);
+    }
+  }
+
+  async function handleRemoveSkill(skillId: string) {
+    await removeSkill(skillId);
+    setSkills(skills.filter((s) => s.id !== skillId));
   }
 
   async function handlePortfolioUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploadingPortfolio(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title", portfolioTitle || file.name);
     formData.append("description", portfolioDescription);
     formData.append("category", portfolioCategory);
-
     const result = await uploadPortfolioItem(formData);
     if (result.item) {
       setPortfolio([result.item, ...portfolio]);
@@ -100,28 +138,20 @@ export default function MyProfilePage() {
   }
 
   async function handleDeletePortfolio(itemId: string) {
-    const result = await deletePortfolioItem(itemId);
-    if (result.success) {
-      setPortfolio(portfolio.filter((p) => p.id !== itemId));
-    }
+    await deletePortfolioItem(itemId);
+    setPortfolio(portfolio.filter((p) => p.id !== itemId));
   }
 
   async function handleSaveProfile() {
-    if (!profile) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase
-      .from("nexgigs_profiles")
-      .update({
-        bio: profile.bio,
-        city: profile.city,
-        state: profile.state,
-        neighborhood: profile.neighborhood,
-      })
-      .eq("id", user.id);
-
+    await updateProfile({
+      bio: editBio,
+      city: editCity,
+      state: editState,
+      neighborhood: editNeighborhood,
+    });
+    if (profile) {
+      setProfile({ ...profile, bio: editBio, city: editCity, state: editState, neighborhood: editNeighborhood });
+    }
     setEditing(false);
   }
 
@@ -135,18 +165,29 @@ export default function MyProfilePage() {
 
   if (!profile) return null;
 
+  const avgRating = Number(rating?.average_rating ?? 0);
+
   return (
     <div className="max-w-lg mx-auto px-4 py-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-black text-white">My Profile</h1>
-        <Button variant="ghost" size="sm" onClick={() => editing ? handleSaveProfile() : setEditing(true)}>
-          {editing ? "Save" : <><Edit3 className="w-4 h-4 mr-1" /> Edit</>}
-        </Button>
+        <div className="flex gap-2">
+          {editing ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleSaveProfile}>Save</Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <Edit3 className="w-4 h-4 mr-1" /> Edit
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Avatar */}
-      <div className="flex flex-col items-center mb-6">
+      {/* Avatar + Identity */}
+      <div className="flex items-start gap-4 mb-6">
         <div className="relative">
           <Avatar
             src={profile.avatar_url as string}
@@ -159,265 +200,322 @@ export default function MyProfilePage() {
             disabled={uploading}
             className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-brand-orange flex items-center justify-center hover:bg-orange-600 transition-colors"
           >
-            {uploading ? (
-              <Loader2 className="w-4 h-4 text-white animate-spin" />
-            ) : (
-              <Camera className="w-4 h-4 text-white" />
-            )}
+            {uploading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
           </button>
-          <input
-            ref={avatarInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            onChange={handleAvatarUpload}
-          />
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </div>
-        <h2 className="mt-3 text-lg font-bold text-white">
-          {profile.first_name as string} {profile.last_initial as string}.
-        </h2>
-        <div className="flex items-center gap-1 text-sm text-zinc-400">
-          <MapPin className="w-3.5 h-3.5" />
-          {profile.neighborhood ? `${profile.neighborhood as string}, ` : ""}
-          {profile.city as string}, {profile.state as string}
-        </div>
-      </div>
-
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
-          <div className="text-lg font-black text-white">{Number(xp?.gigs_completed ?? 0)}</div>
-          <div className="text-xs text-zinc-500">Gigs</div>
-        </div>
-        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
-          <div className="text-lg font-black text-white">
-            {Number(rating?.average_rating) > 0 ? Number(rating?.average_rating).toFixed(1) : "--"}
+        <div className="flex-1">
+          <h2 className="text-lg font-bold text-white">
+            {profile.first_name as string} {profile.last_initial as string}.
+          </h2>
+          <div className="flex items-center gap-1 text-sm text-zinc-400 mt-0.5">
+            <MapPin className="w-3.5 h-3.5" />
+            {profile.neighborhood ? `${profile.neighborhood as string}, ` : ""}
+            {profile.city as string}, {profile.state as string}
           </div>
-          <div className="text-xs text-zinc-500">Rating</div>
-        </div>
-        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
-          <div className="text-lg font-black text-brand-orange">{Number(xp?.total_xp ?? 0)}</div>
-          <div className="text-xs text-zinc-500">XP</div>
+          <div className="flex items-center gap-2 mt-1 text-sm">
+            <span className="text-brand-orange font-semibold">
+              Lvl {Number(xp?.current_level ?? 1)} — {String(xp?.level_title ?? "Task Starter")}
+            </span>
+          </div>
+          {/* Badges */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {Boolean(profile.identity_verified) && (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-brand-orange/10 text-[10px] text-brand-orange">
+                <Shield className="w-2.5 h-2.5" /> ID Verified
+              </span>
+            )}
+            {Boolean(profile.background_checked) && (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-900/30 text-[10px] text-green-400">
+                <CheckCircle className="w-2.5 h-2.5" /> BG Checked
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Profile sections */}
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-2 mb-6">
+        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
+          <Briefcase className="w-4 h-4 text-brand-orange mx-auto" />
+          <div className="text-lg font-black text-white mt-1">{Number(xp?.gigs_completed ?? 0)}</div>
+          <div className="text-[10px] text-zinc-500">Gigs</div>
+        </div>
+        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
+          <Star className="w-4 h-4 text-brand-orange mx-auto" />
+          <div className="text-lg font-black text-white mt-1">{avgRating > 0 ? avgRating.toFixed(1) : "--"}</div>
+          <div className="text-[10px] text-zinc-500">Rating</div>
+        </div>
+        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
+          <Zap className="w-4 h-4 text-brand-orange mx-auto" />
+          <div className="text-lg font-black text-brand-orange mt-1">{Number(xp?.total_xp ?? 0)}</div>
+          <div className="text-[10px] text-zinc-500">XP</div>
+        </div>
+        <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
+          <span className="text-brand-orange text-sm">$</span>
+          <div className="text-lg font-black text-white mt-1">{Number(xp?.total_earned ?? 0).toFixed(0)}</div>
+          <div className="text-[10px] text-zinc-500">Earned</div>
+        </div>
+      </div>
+
+      {/* Editing mode */}
       {editing ? (
-        <div className="space-y-4">
+        <div className="space-y-4 mb-6">
           <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-300">Bio</label>
             <textarea
-              value={String(profile.bio ?? "")}
-              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+              value={editBio}
+              onChange={(e) => setEditBio(e.target.value)}
               rows={3}
               className="w-full px-4 py-2.5 rounded-lg border border-zinc-700 bg-card text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange resize-none"
               placeholder="Tell people about your skills and experience..."
             />
           </div>
-          <Input
-            id="city"
+          <CityInput
             label="City"
-            value={String(profile.city ?? "")}
-            onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+            value={editCity}
+            onChange={setEditCity}
+            onSelect={(r) => { if (r.state) setEditState(r.state); }}
+            state={editState}
           />
           <div className="grid grid-cols-2 gap-3">
+            <StateSelect label="State" value={editState} onChange={setEditState} />
             <Input
-              id="state"
-              label="State"
-              value={String(profile.state ?? "")}
-              onChange={(e) => setProfile({ ...profile, state: e.target.value })}
-            />
-            <Input
-              id="neighborhood"
               label="Neighborhood"
-              value={String(profile.neighborhood ?? "")}
-              onChange={(e) => setProfile({ ...profile, neighborhood: e.target.value })}
+              value={editNeighborhood}
+              onChange={(e) => setEditNeighborhood(e.target.value)}
+              placeholder="e.g. Bay View"
             />
-          </div>
-          <div className="flex gap-2">
-            <Button className="flex-1" onClick={handleSaveProfile}>Save Changes</Button>
-            <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <>
           {/* Bio */}
-          <div className="p-4 rounded-xl bg-card border border-zinc-800">
-            <h3 className="text-sm font-bold text-white mb-1">About</h3>
-            <p className="text-sm text-zinc-400">
-              {(profile.bio as string) || "No bio yet. Tap Edit to add one."}
-            </p>
-          </div>
-
-          {/* Skills */}
-          <div className="p-4 rounded-xl bg-card border border-zinc-800">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-white">Skills</h3>
-              <button className="text-xs text-brand-orange hover:underline">
-                <Plus className="w-3 h-3 inline mr-0.5" /> Add
-              </button>
+          {(profile.bio as string) ? (
+            <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+              <h3 className="text-sm font-bold text-white mb-1">About</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">{profile.bio as string}</p>
             </div>
-            {skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
-                  <span key={skill.id as string} className="px-2 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">
-                    {skill.skill_name as string}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">
-                No skills added yet. Add your skills to get matched with jobs.
-              </p>
+          ) : (
+            <div className="p-4 rounded-xl bg-card border border-dashed border-zinc-700 mb-4 text-center">
+              <p className="text-sm text-zinc-500">No bio yet.</p>
+              <button onClick={() => setEditing(true)} className="text-xs text-brand-orange hover:underline mt-1">Add a bio</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Skills */}
+      <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-white">Skills ({skills.length})</h3>
+          <button onClick={() => setShowSkillForm(!showSkillForm)} className="text-xs text-brand-orange hover:underline">
+            {showSkillForm ? "Cancel" : <><Plus className="w-3 h-3 inline mr-0.5" /> Add Skill</>}
+          </button>
+        </div>
+
+        {/* Add skill form */}
+        {showSkillForm && (
+          <div className="mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-700 space-y-2">
+            <Combobox
+              options={SERVICE_CATEGORIES.map((c) => ({ value: c.name, label: c.name }))}
+              value={newSkillCategory}
+              onChange={(val) => {
+                setNewSkillCategory(val);
+                setNewSkillName("");
+              }}
+              placeholder="Select category..."
+              searchPlaceholder="Search categories..."
+            />
+            {newSkillCategory && (
+              <Combobox
+                options={currentCategorySkills}
+                value={newSkillName}
+                onChange={setNewSkillName}
+                placeholder="Select or type a skill..."
+                searchPlaceholder="Search skills..."
+              />
             )}
+            {newSkillName && (
+              <Input
+                label="Years of experience"
+                type="number"
+                min={0}
+                max={50}
+                value={newSkillYears}
+                onChange={(e) => setNewSkillYears(e.target.value)}
+                placeholder="0"
+              />
+            )}
+            <Button size="sm" className="w-full" onClick={handleAddSkill} disabled={!newSkillName || !newSkillCategory}>
+              Add Skill
+            </Button>
           </div>
+        )}
 
-          {/* Portfolio */}
-          <div className="p-4 rounded-xl bg-card border border-zinc-800">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-white">Portfolio ({portfolio.length})</h3>
-              <button
-                className="text-xs text-brand-orange hover:underline"
-                onClick={() => setShowPortfolioForm(true)}
+        {skills.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <div
+                key={skill.id as string}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 group"
               >
-                <Plus className="w-3 h-3 inline mr-0.5" /> Add
-              </button>
-            </div>
+                <span className="text-xs text-zinc-300">{skill.skill_name as string}</span>
+                {Number(skill.experience_years) > 0 && (
+                  <span className="text-[10px] text-zinc-500">{skill.experience_years as number}y</span>
+                )}
+                <button
+                  onClick={() => handleRemoveSkill(skill.id as string)}
+                  className="ml-0.5 text-zinc-600 hover:text-brand-red opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : !showSkillForm ? (
+          <p className="text-sm text-zinc-500">Add skills to get matched with relevant jobs.</p>
+        ) : null}
+      </div>
 
-            {/* Upload form */}
-            {showPortfolioForm && (
-              <div className="mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-700 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-300">Add portfolio item</span>
-                  <button onClick={() => setShowPortfolioForm(false)}>
-                    <X className="w-4 h-4 text-zinc-500" />
+      {/* Portfolio */}
+      <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-white">Portfolio ({portfolio.length})</h3>
+          <button onClick={() => setShowPortfolioForm(!showPortfolioForm)} className="text-xs text-brand-orange hover:underline">
+            {showPortfolioForm ? "Cancel" : <><Plus className="w-3 h-3 inline mr-0.5" /> Add Work</>}
+          </button>
+        </div>
+
+        {showPortfolioForm && (
+          <div className="mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-700 space-y-2">
+            <Input
+              label="Title"
+              value={portfolioTitle}
+              onChange={(e) => setPortfolioTitle(e.target.value)}
+              placeholder="What did you create?"
+            />
+            <Input
+              label="Category"
+              value={portfolioCategory}
+              onChange={(e) => setPortfolioCategory(e.target.value)}
+              placeholder="e.g. Logo Design, Lawn Care"
+            />
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-zinc-300">Description (optional)</label>
+              <textarea
+                value={portfolioDescription}
+                onChange={(e) => setPortfolioDescription(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-white text-xs focus:outline-none focus:border-brand-orange resize-none"
+                placeholder="Brief description of the work..."
+              />
+            </div>
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={() => portfolioInputRef.current?.click()}
+              disabled={uploadingPortfolio}
+            >
+              {uploadingPortfolio ? (
+                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Uploading...</>
+              ) : (
+                <><Plus className="w-3 h-3 mr-1" /> Choose Photo/Video</>
+              )}
+            </Button>
+            <input
+              ref={portfolioInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4"
+              className="hidden"
+              onChange={handlePortfolioUpload}
+            />
+          </div>
+        )}
+
+        {portfolio.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {portfolio.map((item) => (
+              <div key={item.id as string} className="relative group aspect-square rounded-xl overflow-hidden bg-zinc-800">
+                {(item.media_type as string) === "video" ? (
+                  <video src={item.media_url as string} className="w-full h-full object-cover" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.media_url as string} alt={item.title as string} className="w-full h-full object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button onClick={() => handleDeletePortfolio(item.id as string)} className="p-1.5 rounded-full bg-brand-red/80 text-white">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={portfolioTitle}
-                  onChange={(e) => setPortfolioTitle(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-white text-xs focus:outline-none focus:border-brand-orange"
-                />
-                <input
-                  type="text"
-                  placeholder="Category (e.g. Logo Design)"
-                  value={portfolioCategory}
-                  onChange={(e) => setPortfolioCategory(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-white text-xs focus:outline-none focus:border-brand-orange"
-                />
-                <textarea
-                  placeholder="Description (optional)"
-                  value={portfolioDescription}
-                  onChange={(e) => setPortfolioDescription(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-white text-xs focus:outline-none focus:border-brand-orange resize-none"
-                />
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => portfolioInputRef.current?.click()}
-                  disabled={uploadingPortfolio}
-                >
-                  {uploadingPortfolio ? (
-                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Uploading...</>
-                  ) : (
-                    <><Plus className="w-3 h-3 mr-1" /> Choose File & Upload</>
-                  )}
-                </Button>
-                <input
-                  ref={portfolioInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4"
-                  className="hidden"
-                  onChange={handlePortfolioUpload}
-                />
+                <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80">
+                  <span className="text-[10px] text-white leading-tight line-clamp-1">{item.title as string}</span>
+                </div>
               </div>
-            )}
+            ))}
+          </div>
+        ) : !showPortfolioForm ? (
+          <p className="text-sm text-zinc-500">Upload photos and videos of your work to attract clients.</p>
+        ) : null}
+      </div>
 
-            {/* Portfolio grid */}
-            {portfolio.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {portfolio.map((item) => (
-                  <div key={item.id as string} className="relative group aspect-square rounded-xl overflow-hidden bg-zinc-800">
-                    {(item.media_type as string) === "video" ? (
-                      <video
-                        src={item.media_url as string}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.media_url as string}
-                        alt={item.title as string}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button
-                        onClick={() => handleDeletePortfolio(item.id as string)}
-                        className="p-1.5 rounded-full bg-brand-red/80 text-white"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80">
-                      <span className="text-xs text-white leading-tight line-clamp-1">
-                        {item.title as string}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+      {/* Verification */}
+      <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+        <h3 className="text-sm font-bold text-white mb-3">Verification</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className={cn("w-5 h-5", Boolean(profile.identity_verified) ? "text-green-400" : "text-zinc-500")} />
+              <div>
+                <span className="text-sm text-zinc-300">ID Verification</span>
+                <p className="text-xs text-zinc-500">Government ID + selfie match</p>
               </div>
+            </div>
+            {Boolean(profile.identity_verified) ? (
+              <span className="text-xs text-green-400 font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verified</span>
             ) : (
-              <p className="text-sm text-zinc-500">
-                Show off your work. Upload photos and videos of past projects.
-              </p>
+              <Button variant="outline" size="sm">Verify</Button>
             )}
           </div>
-
-          {/* Verification */}
-          <div className="p-4 rounded-xl bg-card border border-zinc-800">
-            <h3 className="text-sm font-bold text-white mb-2">Verification</h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-zinc-400">
-                  <Shield className="w-4 h-4" /> ID Verification
-                </span>
-                {Boolean(profile.identity_verified) ? (
-                  <span className="text-xs text-green-400">Verified</span>
-                ) : (
-                  <Button variant="outline" size="sm">Verify</Button>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-zinc-400">
-                  <Shield className="w-4 h-4" /> Background Check
-                </span>
-                {Boolean(profile.background_checked) ? (
-                  <span className="text-xs text-green-400">Checked</span>
-                ) : (
-                  <Button variant="outline" size="sm">Start</Button>
-                )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className={cn("w-5 h-5", Boolean(profile.background_checked) ? "text-green-400" : "text-zinc-500")} />
+              <div>
+                <span className="text-sm text-zinc-300">Background Check</span>
+                <p className="text-xs text-zinc-500">Criminal + identity via Checkr</p>
               </div>
             </div>
-          </div>
-
-          {/* Account links */}
-          <div className="p-4 rounded-xl bg-card border border-zinc-800">
-            <h3 className="text-sm font-bold text-white mb-2">Account</h3>
-            <div className="space-y-2">
-              <button className="w-full flex items-center gap-2 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
-                <Settings className="w-4 h-4" /> Account Settings
-              </button>
-              <button className="w-full flex items-center gap-2 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
-                <Award className="w-4 h-4" /> Subscription
-              </button>
-            </div>
+            {Boolean(profile.background_checked) ? (
+              <span className="text-xs text-green-400 font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Checked</span>
+            ) : (
+              <Button variant="outline" size="sm">Start</Button>
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Account links */}
+      <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+        <h3 className="text-sm font-bold text-white mb-2">Account</h3>
+        <div className="space-y-1">
+          <Link href="/subscription" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><Award className="w-4 h-4" /> Subscription</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+          <Link href="/insurance" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><Shield className="w-4 h-4" /> NexGigs Shield</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+          <Link href="/safety" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><Settings className="w-4 h-4" /> Safety Settings</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+          <button className="w-full flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> Payment Settings</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
