@@ -13,7 +13,7 @@ import { SERVICE_CATEGORIES, SKILL_SUGGESTIONS } from "@/lib/constants";
 import {
   MapPin, Shield, Award, Settings, Camera, Plus, Edit3,
   Loader2, Trash2, X, Star, Briefcase, Zap, ChevronRight,
-  CheckCircle, CreditCard,
+  CheckCircle, CreditCard, DollarSign,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -518,6 +518,10 @@ export default function MyProfilePage() {
       <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
         <h3 className="text-sm font-bold text-white mb-2">Account</h3>
         <div className="space-y-1">
+          <Link href="/earnings" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> Earnings & Taxes</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
           <Link href="/subscription" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
             <span className="flex items-center gap-2"><Award className="w-4 h-4" /> Subscription</span>
             <ChevronRight className="w-4 h-4" />
