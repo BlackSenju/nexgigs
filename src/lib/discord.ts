@@ -195,11 +195,48 @@ function getEmbedForEvent(
   }
 }
 
+type WebhookChannel = "signups" | "jobs" | "payments" | "security";
+
+const EVENT_CHANNEL_MAP: Record<NotificationEvent, WebhookChannel> = {
+  new_signup: "signups",
+  new_login: "signups",
+  job_posted: "jobs",
+  job_applied: "jobs",
+  job_completed: "jobs",
+  payment_received: "payments",
+  payment_released: "payments",
+  rating_submitted: "jobs",
+  ghost_report: "security",
+  ghost_wall_added: "security",
+  guild_created: "jobs",
+  shop_item_listed: "jobs",
+  shop_order: "payments",
+  mfa_enabled: "security",
+  identity_verified: "signups",
+  background_checked: "signups",
+  subscription_upgraded: "payments",
+  dispute_opened: "security",
+  security_alert: "security",
+};
+
+function getWebhookUrl(channel: WebhookChannel): string | undefined {
+  // Try channel-specific webhook first, fall back to general
+  const channelEnvMap: Record<WebhookChannel, string> = {
+    signups: "DISCORD_WEBHOOK_SIGNUPS",
+    jobs: "DISCORD_WEBHOOK_JOBS",
+    payments: "DISCORD_WEBHOOK_PAYMENTS",
+    security: "DISCORD_WEBHOOK_SECURITY",
+  };
+
+  return process.env[channelEnvMap[channel]] || process.env.DISCORD_WEBHOOK_URL;
+}
+
 export async function notifyDiscord(
   event: NotificationEvent,
   data: Record<string, string | number | boolean>
 ): Promise<void> {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const channel = EVENT_CHANNEL_MAP[event] || "security";
+  const webhookUrl = getWebhookUrl(channel);
   if (!webhookUrl) return;
 
   const embed = getEmbedForEvent(event, data);
