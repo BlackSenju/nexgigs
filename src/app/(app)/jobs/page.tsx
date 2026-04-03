@@ -1,149 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { JobCard, type JobCardData } from "@/components/jobs/job-card";
 import { JobFilters } from "@/components/jobs/job-filters";
-import { MapPin, Search } from "lucide-react";
-
-// Sample data for preview — will be replaced with Supabase queries
-const SAMPLE_JOBS: JobCardData[] = [
-  {
-    id: "1",
-    title: "Need lawn mowed + hedges trimmed",
-    category: "Home & Yard",
-    description:
-      "Front and back yard needs mowing. Hedges along the driveway need trimming. I have all the equipment, just need someone to do the work.",
-    city: "Milwaukee",
-    neighborhood: "Bay View",
-    price: 75,
-    duration_type: "One-time",
-    is_urgent: true,
-    poster_name: "Sarah M.",
-    poster_rating: 4.8,
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    applications_count: 3,
-  },
-  {
-    id: "2",
-    title: "Logo design for new food truck",
-    category: "Creative & Digital",
-    description:
-      "Starting a food truck called 'MKE Eats' — need a bold, colorful logo. Must include the name and a food icon. Will need files in PNG and SVG.",
-    city: "Milwaukee",
-    neighborhood: "Third Ward",
-    price_min: 100,
-    price_max: 250,
-    duration_type: "Project",
-    poster_name: "Marcus J.",
-    poster_rating: 4.5,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    applications_count: 7,
-  },
-  {
-    id: "3",
-    title: "Help moving furniture to new apartment",
-    category: "Personal Errands",
-    description:
-      "Moving from 1st floor to 3rd floor. Need 2 people. Couch, bed frame, dresser, desk, and about 15 boxes. Building has an elevator.",
-    city: "Milwaukee",
-    neighborhood: "East Side",
-    price: 150,
-    duration_type: "One-time",
-    is_urgent: true,
-    poster_name: "Tanya R.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    applications_count: 1,
-  },
-  {
-    id: "4",
-    title: "Braids — knotless box braids medium length",
-    category: "Hair & Beauty",
-    description:
-      "Looking for someone experienced in knotless box braids. Medium length, medium size. I'll provide reference photos. My hair is natural, shoulder length.",
-    city: "Milwaukee",
-    neighborhood: "Sherman Park",
-    price_min: 120,
-    price_max: 180,
-    duration_type: "One-time",
-    poster_name: "Destiny K.",
-    poster_rating: 5.0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    applications_count: 5,
-  },
-  {
-    id: "5",
-    title: "WiFi setup + smart home install",
-    category: "Tech Help",
-    description:
-      "Need help setting up mesh WiFi (I have the Eero system) and installing 4 smart plugs, 2 Ring cameras, and a Nest thermostat. House is 2 stories.",
-    city: "Milwaukee",
-    neighborhood: "Wauwatosa",
-    hourly_rate: 35,
-    duration_type: "One-time",
-    poster_name: "David L.",
-    poster_rating: 4.2,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    applications_count: 2,
-  },
-  {
-    id: "6",
-    title: "DJ needed for birthday party — 4 hours",
-    category: "Events",
-    description:
-      "30th birthday party at a rented venue. Need a DJ with own equipment. Mix of R&B, hip hop, and afrobeats. 8pm–midnight. 75 guests expected.",
-    city: "Milwaukee",
-    neighborhood: "Walker's Point",
-    price: 300,
-    duration_type: "One-time",
-    poster_name: "Andre W.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    applications_count: 4,
-  },
-  {
-    id: "7",
-    title: "Weekly meal prep — 5 days of lunches",
-    category: "Food & Cooking",
-    description:
-      "Need someone to meal prep 5 days of healthy lunches every Sunday. High protein, low carb. I have dietary restrictions (no dairy). Budget is per week.",
-    city: "Milwaukee",
-    neighborhood: "Riverwest",
-    price: 120,
-    duration_type: "Recurring",
-    poster_name: "Kim T.",
-    poster_rating: 4.9,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    applications_count: 6,
-  },
-  {
-    id: "8",
-    title: "Car detailing — interior + exterior",
-    category: "Auto & Vehicle",
-    description:
-      "2019 Honda Accord needs a full detail. Interior vacuum, shampoo seats, dashboard clean. Exterior wash, clay bar, wax. Can come to your location or mine.",
-    city: "Milwaukee",
-    neighborhood: "Brookfield",
-    price_min: 80,
-    price_max: 150,
-    duration_type: "One-time",
-    poster_name: "Carlos R.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
-    applications_count: 3,
-  },
-];
+import { MapPin, Search, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function JobFeedPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [jobs, setJobs] = useState<JobCardData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userCity, setUserCity] = useState("Milwaukee");
+  const [userState, setUserState] = useState("WI");
 
-  const filteredJobs = SAMPLE_JOBS.filter((job) => {
-    const matchesCategory =
-      selectedCategory === "All" || job.category === selectedCategory;
-    const matchesSearch =
-      !searchQuery ||
-      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const fetchJobs = useCallback(async () => {
+    setLoading(true);
+    const supabase = createClient();
+
+    let query = supabase
+      .from("nexgigs_jobs")
+      .select(`
+        id, title, description, category, city, neighborhood,
+        price, price_min, price_max, hourly_rate, duration_type,
+        is_urgent, is_remote, applications_count, created_at,
+        poster:nexgigs_profiles!poster_id(first_name, last_initial)
+      `)
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (selectedCategory !== "All") {
+      query = query.eq("category", selectedCategory);
+    }
+    if (searchQuery) {
+      query = query.or(
+        `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+      );
+    }
+
+    const { data } = await query;
+
+    const mapped: JobCardData[] = (data ?? []).map((job: Record<string, unknown>) => {
+      const poster = job.poster as Record<string, string> | null;
+      return {
+        id: job.id as string,
+        title: job.title as string,
+        category: job.category as string,
+        description: job.description as string,
+        city: job.city as string,
+        neighborhood: job.neighborhood as string | undefined,
+        price: job.price as number | undefined,
+        price_min: job.price_min as number | undefined,
+        price_max: job.price_max as number | undefined,
+        hourly_rate: job.hourly_rate as number | undefined,
+        duration_type: job.duration_type as string,
+        is_urgent: job.is_urgent as boolean | undefined,
+        is_remote: job.is_remote as boolean | undefined,
+        poster_name: poster
+          ? `${poster.first_name} ${poster.last_initial}.`
+          : "Anonymous",
+        created_at: job.created_at as string,
+        applications_count: (job.applications_count as number) ?? 0,
+      };
+    });
+
+    setJobs(mapped);
+    setLoading(false);
+  }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // Load user's city from profile
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase
+          .from("nexgigs_profiles")
+          .select("city, state")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUserCity(profile.city);
+              setUserState(profile.state);
+            }
+          });
+      }
+    });
+  }, []);
 
   return (
     <div className="px-4 py-4 max-w-2xl mx-auto">
@@ -151,10 +99,14 @@ export default function JobFeedPage() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-brand-orange" />
-          <span className="text-sm font-semibold text-white">Milwaukee, WI</span>
+          <span className="text-sm font-semibold text-white">
+            {userCity}, {userState}
+          </span>
           <span className="text-xs text-zinc-500">10 mi</span>
         </div>
-        <span className="text-xs text-zinc-500">{filteredJobs.length} gigs nearby</span>
+        <span className="text-xs text-zinc-500">
+          {loading ? "..." : `${jobs.length} gigs nearby`}
+        </span>
       </div>
 
       {/* Search bar */}
@@ -175,17 +127,28 @@ export default function JobFeedPage() {
       </div>
 
       {/* Job list */}
-      <div className="space-y-3">
-        {filteredJobs.map((job) => (
-          <JobCard key={job.id} job={job} />
-        ))}
+      {loading ? (
+        <div className="py-20 flex flex-col items-center text-zinc-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span className="mt-2 text-sm">Loading gigs...</span>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {jobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
 
-        {filteredJobs.length === 0 && (
-          <div className="py-12 text-center">
-            <p className="text-zinc-500">No gigs found. Try a different category.</p>
-          </div>
-        )}
-      </div>
+          {jobs.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-zinc-500">
+                {searchQuery || selectedCategory !== "All"
+                  ? "No gigs found. Try a different filter."
+                  : "No gigs posted yet. Be the first to post a job!"}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

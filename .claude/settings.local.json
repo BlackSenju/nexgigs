@@ -33,7 +33,30 @@
       "Bash(ls -la \"C:\\\\Users\\\\jevau_gsp3lw9\\\\NexGigs\\\\src\\\\app\\\\\\(app\\\\\\)\")",
       "Bash(grep -r \"discord\\\\|webhook\\\\|resend\" /c/Users/jevau_gsp3lw9 --include=*.ts --include=*.tsx --include=*.js --include=*.json -l)",
       "Bash(find /c/Users/jevau_gsp3lw9/projects/nexpaths -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js \\\\\\))",
-      "Bash(find /c/Users/jevau_gsp3lw9/projects/nexpaths/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
+      "Bash(find /c/Users/jevau_gsp3lw9/projects/nexpaths/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find /c/Users/jevau_gsp3lw9/projects/nexpaths -name *discord* -o -name *webhook*)",
+      "Bash(find /c/Users/jevau_gsp3lw9 -maxdepth 3 -name *.py)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/jevau_gsp3lw9 -maxdepth 4 -name *.py)",
+      "Bash(grep -ri DISCORD /c/Users/jevau_gsp3lw9/projects/nexpaths/.env*)",
+      "Bash(find /c/Users/jevau_gsp3lw9 -maxdepth 4 -name *.py -path *alucard*)",
+      "Bash(find /c/Users/jevau_gsp3lw9/projects/alucard-home -name *.py)",
+      "Bash(find /c/Users/jevau_gsp3lw9 -maxdepth 5 -name *.py)",
+      "Bash(find /c/Users/jevau_gsp3lw9 -maxdepth 5 -name *.py -o -name *.js -o -name *.ts)",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no umbrel@100.113.165.126 \"echo ''CONNECTED'' && uname -a\")",
+      "Bash(ping -c 2 -W 5 100.113.165.126)",
+      "Bash(ping -n 2 -w 5000 100.113.165.126)",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no alucard@192.168.1.65 \"echo ''CONNECTED'' && uname -a && hostname\")",
+      "Bash(ssh alucard@192.168.1.65 \"cat /home/alucard/.openclaw/credentials/discord-pairing.json 2>/dev/null\")",
+      "Bash(ssh alucard@192.168.1.65 \"env | grep -i DISCORD 2>/dev/null; cat /home/alucard/.secrets/discord_bot_token 2>/dev/null || echo ''no bot token file''; find /home/alucard -maxdepth 3 -name ''*.env'' -o -name ''.env*'' 2>/dev/null | head -10\")",
+      "Bash(ssh alucard@192.168.1.65 \"grep -r ''DISCORD_BOT_TOKEN\\\\|DISCORD_TOKEN\\\\|BOT_TOKEN'' /home/alucard/.secrets/ /home/alucard/acc/.env /home/alucard/hiveminds/.env 2>/dev/null | sed ''s/=.*/=***REDACTED***/'' \")",
+      "Bash(ssh alucard@192.168.1.65 \"curl -s ''https://discord.com/api/webhooks/1474621753782304860/l9kEi5zbusbLBav-A5TxLHtjRFsgGcdDw9iy3QAn-5crgC6Rtj-cI4tCB9KdD0iMbVn-'' | python3 -c ''import json,sys; d=json.load\\(sys.stdin\\); print\\(\"\"guild_id:\"\", d.get\\(\"\"guild_id\"\"\\)\\); print\\(\"\"channel_id:\"\", d.get\\(\"\"channel_id\"\"\\)\\); print\\(\"\"name:\"\", d.get\\(\"\"name\"\"\\)\\)''\")",
+      "Bash(ssh alucard@192.168.1.65 \"curl -s ''https://discord.com/api/webhooks/1485512243834519614/j8AkHrcfqUBm4ZeU2yjhUtXYCU2WcAoTaeUAOf9DMuwqeSej4MbRXNme2EMm_WADyVHz'' | python3 -m json.tool 2>/dev/null | head -20\")",
+      "Bash(ssh alucard@192.168.1.65 \"openclaw --help 2>&1 | head -30 && echo ''===DISCORD==='' && openclaw discord --help 2>&1 || echo ''no discord subcommand''\")",
+      "Bash(ssh alucard@192.168.1.65 \"openclaw update --help 2>&1\")",
+      "Bash(ssh alucard@192.168.1.65 \"openclaw update status --json 2>&1\")",
+      "Bash(ssh alucard@192.168.1.65 \"openclaw update --yes 2>&1\")",
+      "Bash(ssh alucard@192.168.1.65 \"sudo npm i -g openclaw@latest 2>&1 | tail -5\")"
     ]
   }
 }

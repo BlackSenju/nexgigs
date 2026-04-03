@@ -1,8 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
+import { applyToJob } from "@/lib/actions/jobs";
 import {
   MapPin,
   Clock,
@@ -17,76 +20,113 @@ import {
   Share2,
   Bookmark,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
-
-// Sample job data — will be replaced with Supabase query
-const SAMPLE_JOB = {
-  id: "1",
-  title: "Need lawn mowed + hedges trimmed",
-  category: "Home & Yard",
-  subcategory: "Lawn mowing",
-  description: `Front and back yard needs mowing. Hedges along the driveway need trimming. I have all the equipment — just need someone to do the work.
-
-The yard is about 1/4 acre total. Front has a standard grass lawn, back has some uneven areas near the fence.
-
-Hedges are about 4 feet tall, run along the left side of the driveway (about 30 feet).
-
-I'd prefer someone who can come this weekend. Morning works best.`,
-  city: "Milwaukee",
-  state: "WI",
-  neighborhood: "Bay View",
-  price: 75,
-  duration_type: "One-time",
-  job_type: "task",
-  is_urgent: true,
-  requires_license: false,
-  requires_background_check: false,
-  team_size_needed: 1,
-  milestone_count: 1,
-  start_date: "2026-04-05",
-  views_count: 42,
-  applications_count: 3,
-  created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  poster: {
-    id: "poster-1",
-    first_name: "Sarah",
-    last_initial: "M",
-    city: "Milwaukee",
-    neighborhood: "Bay View",
-    rating: 4.8,
-    total_ratings: 12,
-    level_title: "Trusted Tasker",
-    jobs_posted: 8,
-    member_since: "2025-11",
-  },
-  milestones: [
-    { number: 1, title: "Complete yard work", percentage: 100, amount: 75 },
-  ],
-};
 
 export default function JobDetailPage() {
-  useParams();
+  const { id } = useParams();
+  const [job, setJob] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [message, setMessage] = useState("");
   const [applied, setApplied] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const job = SAMPLE_JOB;
+  useEffect(() => {
+    async function fetchJob() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("nexgigs_jobs")
+        .select(`
+          *,
+          poster:nexgigs_profiles!poster_id(
+            id, first_name, last_initial, city, state, neighborhood,
+            verification_tier, identity_verified, created_at
+          ),
+          milestones:nexgigs_milestones(*)
+        `)
+        .eq("id", id)
+        .single();
 
-  function handleApply() {
+      if (data) {
+        // Get poster rating + xp
+        const [{ data: rating }, { data: xp }] = await Promise.all([
+          supabase.from("nexgigs_user_ratings").select("*").eq("user_id", data.poster_id).single(),
+          supabase.from("nexgigs_user_xp").select("*").eq("user_id", data.poster_id).single(),
+        ]);
+        setJob({ ...data, poster_rating: rating, poster_xp: xp });
+
+        // Check if current user already applied
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: existing } = await supabase
+            .from("nexgigs_applications")
+            .select("id")
+            .eq("job_id", id)
+            .eq("gigger_id", user.id)
+            .maybeSingle();
+          if (existing) setApplied(true);
+        }
+      }
+      setLoading(false);
+    }
+    if (id) fetchJob();
+  }, [id]);
+
+  async function handleApply() {
+    setSubmitting(true);
+    setApplyError(null);
+    const result = await applyToJob(
+      id as string,
+      bidAmount ? Number(bidAmount) : null,
+      message
+    );
+    if (result.error) {
+      setApplyError(result.error);
+      setSubmitting(false);
+      return;
+    }
     setApplied(true);
     setShowApply(false);
+    setSubmitting(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 flex justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <p className="text-zinc-500">Job not found.</p>
+        <Link href="/jobs"><Button variant="outline" size="sm" className="mt-4">Back to Jobs</Button></Link>
+      </div>
+    );
+  }
+
+  const poster = job.poster as Record<string, unknown> | null;
+  const posterRating = job.poster_rating as Record<string, unknown> | null;
+  const posterXp = job.poster_xp as Record<string, unknown> | null;
+  const milestones = (job.milestones as Array<Record<string, unknown>>) ?? [];
+
+  function formatPrice() {
+    if (job!.hourly_rate) return `$${job!.hourly_rate}/hr`;
+    if (job!.price) return `$${job!.price}`;
+    if (job!.price_min && job!.price_max) return `$${job!.price_min}–$${job!.price_max}`;
+    return "Open bid";
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
       {/* Back + actions */}
       <div className="flex items-center justify-between mb-4">
-        <Link
-          href="/jobs"
-          className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
-        >
+        <Link href="/jobs" className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to jobs
         </Link>
         <div className="flex items-center gap-2">
@@ -103,29 +143,28 @@ export default function JobDetailPage() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded-full">
-            {job.category}
+            {job.category as string}
           </span>
-          {job.is_urgent && (
+          {Boolean(job.is_urgent) && (
             <span className="flex items-center gap-1 text-xs font-medium text-brand-red bg-brand-red/10 px-2 py-0.5 rounded-full">
               <Zap className="w-3 h-3" /> Urgent
             </span>
           )}
         </div>
-        <h1 className="text-2xl font-black text-white">{job.title}</h1>
-
+        <h1 className="text-2xl font-black text-white">{job.title as string}</h1>
         <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
           <span className="flex items-center gap-1">
             <MapPin className="w-4 h-4" />
-            {job.neighborhood}, {job.city}, {job.state}
+            {job.neighborhood ? `${job.neighborhood as string}, ` : ""}{job.city as string}, {job.state as string}
           </span>
           <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {job.duration_type}
+            <Clock className="w-4 h-4" /> {job.duration_type as string}
           </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            {job.start_date}
-          </span>
+          {Boolean(job.start_date) && (
+            <span className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" /> {job.start_date as string}
+            </span>
+          )}
         </div>
       </div>
 
@@ -134,11 +173,11 @@ export default function JobDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-zinc-400">Budget</div>
-            <div className="text-3xl font-black text-white">${job.price}</div>
+            <div className="text-3xl font-black text-white">{formatPrice()}</div>
           </div>
           <div className="text-right text-sm text-zinc-400">
-            <div>{job.views_count} views</div>
-            <div>{job.applications_count} applicants</div>
+            <div>{job.views_count as number ?? 0} views</div>
+            <div>{job.applications_count as number ?? 0} applicants</div>
           </div>
         </div>
       </div>
@@ -147,7 +186,7 @@ export default function JobDetailPage() {
       <div className="mt-6">
         <h2 className="text-lg font-bold text-white mb-2">About this job</h2>
         <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">
-          {job.description}
+          {job.description as string}
         </div>
       </div>
 
@@ -157,44 +196,33 @@ export default function JobDetailPage() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-zinc-300">
             <Users className="w-4 h-4 text-zinc-500" />
-            <span>{job.team_size_needed} person needed</span>
+            <span>{job.team_size_needed as number ?? 1} person needed</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-zinc-300">
             <Shield className="w-4 h-4 text-zinc-500" />
-            <span>
-              {job.requires_background_check
-                ? "Background check required"
-                : "No background check required"}
-            </span>
+            <span>{job.requires_background_check ? "Background check required" : "No background check required"}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-zinc-300">
             <CheckCircle className="w-4 h-4 text-zinc-500" />
-            <span>
-              {job.requires_license
-                ? "License required"
-                : "No license required"}
-            </span>
+            <span>{job.requires_license ? "License required" : "No license required"}</span>
           </div>
         </div>
       </div>
 
       {/* Milestones */}
-      {job.milestones.length > 0 && (
+      {milestones.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-bold text-white mb-3">Milestones</h2>
           <div className="space-y-2">
-            {job.milestones.map((m) => (
-              <div
-                key={m.number}
-                className="flex items-center justify-between p-3 rounded-lg bg-card border border-zinc-800"
-              >
+            {milestones.map((m) => (
+              <div key={m.id as string} className="flex items-center justify-between p-3 rounded-lg bg-card border border-zinc-800">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-brand-orange/10 text-brand-orange text-xs font-bold flex items-center justify-center">
-                    {m.number}
+                    {m.milestone_number as number}
                   </div>
-                  <span className="text-sm text-zinc-300">{m.title}</span>
+                  <span className="text-sm text-zinc-300">{m.title as string}</span>
                 </div>
-                <span className="text-sm font-bold text-white">${m.amount}</span>
+                {Number(m.amount) > 0 && <span className="text-sm font-bold text-white">${Number(m.amount)}</span>}
               </div>
             ))}
           </div>
@@ -202,100 +230,73 @@ export default function JobDetailPage() {
       )}
 
       {/* Poster info */}
-      <div className="mt-6 p-4 rounded-xl bg-card border border-zinc-800">
-        <h2 className="text-lg font-bold text-white mb-3">Posted by</h2>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
-            <User className="w-6 h-6 text-zinc-400" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white">
-                {job.poster.first_name} {job.poster.last_initial}.
-              </span>
-              <span className="flex items-center gap-0.5 text-sm text-brand-orange">
-                <Star className="w-3.5 h-3.5 fill-current" />
-                {job.poster.rating}
-              </span>
-              <span className="text-xs text-zinc-500">
-                ({job.poster.total_ratings} reviews)
-              </span>
+      {poster && (
+        <div className="mt-6 p-4 rounded-xl bg-card border border-zinc-800">
+          <h2 className="text-lg font-bold text-white mb-3">Posted by</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
+              <User className="w-6 h-6 text-zinc-400" />
             </div>
-            <div className="text-xs text-zinc-400">
-              {job.poster.level_title} &middot; {job.poster.jobs_posted} jobs
-              posted &middot; Member since{" "}
-              {new Date(job.poster.member_since).toLocaleDateString("en-US", {
-                month: "short",
-                year: "numeric",
-              })}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white">
+                  {poster.first_name as string} {poster.last_initial as string}.
+                </span>
+                {posterRating && Number(posterRating.average_rating) > 0 && (
+                  <span className="flex items-center gap-0.5 text-sm text-brand-orange">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    {Number(posterRating.average_rating).toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-zinc-400">
+                {posterXp ? `${posterXp.level_title}` : "New member"} &middot;{" "}
+                {posterXp ? `${posterXp.jobs_posted} jobs posted` : ""}
+              </div>
             </div>
           </div>
+          <Link href={`/profile/${poster.id}`}>
+            <Button variant="ghost" size="sm" className="mt-3 w-full">View Profile</Button>
+          </Link>
         </div>
-        <Link href={`/profile/${job.poster.id}`}>
-          <Button variant="ghost" size="sm" className="mt-3 w-full">
-            View Profile
-          </Button>
-        </Link>
-      </div>
+      )}
 
       {/* Apply section */}
       <div className="mt-6 sticky bottom-20 sm:bottom-4">
         {applied ? (
           <div className="p-4 rounded-xl bg-green-900/30 border border-green-700/50 text-center">
             <CheckCircle className="w-6 h-6 text-green-400 mx-auto" />
-            <p className="mt-2 text-sm font-medium text-green-300">
-              Application submitted!
-            </p>
+            <p className="mt-2 text-sm font-medium text-green-300">Application submitted!</p>
           </div>
         ) : showApply ? (
           <div className="p-4 rounded-xl bg-card border border-zinc-700 space-y-3">
             <h3 className="font-bold text-white">Apply for this gig</h3>
+            {applyError && (
+              <div className="p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{applyError}</div>
+            )}
             <div className="space-y-1">
               <label className="text-xs text-zinc-400">Your bid ($)</label>
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={String(job.price)}
-                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange"
-              />
+              <input type="number" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)}
+                placeholder={String(job.price ?? "")}
+                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange" />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-zinc-400">Message to poster</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Why you're the right person for this job..."
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange resize-none"
-              />
+              <textarea value={message} onChange={(e) => setMessage(e.target.value)}
+                placeholder="Why you're the right person for this job..." rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange resize-none" />
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowApply(false)}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" className="flex-1" onClick={handleApply}>
-                Submit Application
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowApply(false)} disabled={submitting}>Cancel</Button>
+              <Button size="sm" className="flex-1" onClick={handleApply} disabled={submitting}>
+                {submitting ? "Submitting..." : "Submit Application"}
               </Button>
             </div>
           </div>
         ) : (
           <div className="flex gap-3">
-            <Button
-              size="lg"
-              className="flex-1"
-              onClick={() => setShowApply(true)}
-            >
-              Apply Now
-            </Button>
-            <Button variant="outline" size="lg">
-              <MessageSquare className="w-4 h-4" />
-            </Button>
+            <Button size="lg" className="flex-1" onClick={() => setShowApply(true)}>Apply Now</Button>
+            <Button variant="outline" size="lg"><MessageSquare className="w-4 h-4" /></Button>
           </div>
         )}
       </div>

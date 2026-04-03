@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
+import { createJob } from "@/lib/actions/jobs";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +13,7 @@ import {
   Zap,
   Users,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -55,8 +57,43 @@ export default function PostJobPage() {
     if (step > 0) setStep(step - 1);
   }
 
-  function handleSubmit() {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const result = await createJob({
+      title: form.title,
+      description: form.description,
+      category: form.category,
+      jobType: form.jobType,
+      durationType: form.durationType,
+      pricingType: form.pricingType,
+      price: form.price ? Number(form.price) : undefined,
+      priceMin: form.priceMin ? Number(form.priceMin) : undefined,
+      priceMax: form.priceMax ? Number(form.priceMax) : undefined,
+      hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined,
+      city: form.city,
+      state: form.state,
+      zipCode: form.zipCode,
+      neighborhood: form.neighborhood || undefined,
+      isRemote: form.isRemote,
+      isUrgent: form.isUrgent,
+      requiresLicense: form.requiresLicense,
+      teamSizeNeeded: Number(form.teamSizeNeeded) || 1,
+      startDate: form.startDate || undefined,
+    });
+
+    if (result.error) {
+      setSubmitError(result.error);
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitted(true);
+    setSubmitting(false);
   }
 
   if (submitted) {
@@ -408,10 +445,15 @@ export default function PostJobPage() {
             )}
           </div>
 
-          <Button className="w-full" size="lg" onClick={handleSubmit}>
-            Post Job
+          {submitError && (
+            <div className="p-3 rounded-lg bg-brand-red/10 border border-brand-red/30 text-brand-red text-sm">
+              {submitError}
+            </div>
+          )}
+          <Button className="w-full" size="lg" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Posting...</> : "Post Job"}
           </Button>
-          <Button variant="ghost" className="w-full" onClick={prevStep}>
+          <Button variant="ghost" className="w-full" onClick={prevStep} disabled={submitting}>
             Go back and edit
           </Button>
         </div>
