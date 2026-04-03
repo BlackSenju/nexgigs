@@ -8,6 +8,7 @@ import { signup } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Hammer, Briefcase, ArrowLeft } from "lucide-react";
+import { GoogleButton } from "@/components/ui/google-button";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -194,6 +195,17 @@ export default function SignupPage() {
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Creating Account..." : "Create Account"}
           </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-zinc-800" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-background px-2 text-zinc-500">or</span>
+            </div>
+          </div>
+
+          <GoogleButton accountType={accountType} label="Sign up with Google" />
         </form>
 
         <p className="text-center text-sm text-zinc-500">

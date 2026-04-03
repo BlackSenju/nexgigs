@@ -9,6 +9,7 @@ import { challengeMFA, verifyMFA } from "@/lib/actions/mfa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Shield } from "lucide-react";
+import { GoogleButton } from "@/components/ui/google-button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -170,6 +171,17 @@ export default function LoginPage() {
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Logging in..." : "Log In"}
           </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-zinc-800" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-background px-2 text-zinc-500">or</span>
+            </div>
+          </div>
+
+          <GoogleButton label="Log in with Google" />
         </form>
 
         <p className="text-center text-sm text-zinc-500">
