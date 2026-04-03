@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { applyToJob } from "@/lib/actions/jobs";
+import { Disclaimer } from "@/components/ui/disclaimer";
+import { DISCLAIMERS } from "@/lib/legal";
 import {
   MapPin,
   Clock,
@@ -260,6 +262,9 @@ export default function JobDetailPage() {
           </Link>
         </div>
       )}
+
+      {/* Disclaimer */}
+      <Disclaimer text={DISCLAIMERS.hiringGeneral} className="mt-6" />
 
       {/* Apply section */}
       <div className="mt-6 sticky bottom-20 sm:bottom-4">

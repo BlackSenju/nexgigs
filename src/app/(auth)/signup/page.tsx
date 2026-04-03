@@ -196,6 +196,12 @@ export default function SignupPage() {
             />
           </div>
 
+          <p className="text-[11px] text-zinc-500 leading-relaxed">
+            By creating an account, you agree to NexGigs&apos; Terms of Service and Privacy Policy.
+            You acknowledge that NexGigs is a marketplace and does not employ or endorse any user.
+            All services are performed by independent contractors.
+          </p>
+
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Creating Account..." : "Create Account"}
           </Button>

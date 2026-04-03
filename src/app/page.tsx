@@ -211,6 +211,9 @@ export default async function LandingPage() {
               Ghost Wall
             </Link>
           </div>
+          <p className="text-xs text-zinc-600 mt-4 max-w-xl mx-auto text-center leading-relaxed sm:text-left">
+            NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk.
+          </p>
         </div>
       </footer>
     </div>
