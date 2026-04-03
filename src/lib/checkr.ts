@@ -1,0 +1,95 @@
+/**
+ * Checkr API client for background checks.
+ * Creates candidates, orders reports, and processes webhooks.
+ */
+
+const CHECKR_API_URL = "https://api.checkr.com/v1";
+
+function getAuth() {
+  const key = process.env.CHECKR_API_KEY;
+  if (!key) throw new Error("CHECKR_API_KEY not configured");
+  return Buffer.from(`${key}:`).toString("base64");
+}
+
+function getHeaders() {
+  return {
+    Authorization: `Basic ${getAuth()}`,
+    "Content-Type": "application/json",
+  };
+}
+
+/**
+ * Create a Checkr candidate and order a background check.
+ * Requires user consent (FCRA compliance).
+ */
+export async function createBackgroundCheck(input: {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}): Promise<{ candidateId: string; invitationUrl: string }> {
+  // Step 1: Create candidate
+  const candidateRes = await fetch(`${CHECKR_API_URL}/candidates`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      first_name: input.firstName,
+      last_name: input.lastName,
+      email: input.email,
+      custom_id: input.userId,
+    }),
+  });
+
+  if (!candidateRes.ok) {
+    const error = await candidateRes.text();
+    throw new Error(`Checkr API error: ${candidateRes.status} — ${error}`);
+  }
+
+  const candidate = await candidateRes.json();
+  const candidateId = candidate.id;
+
+  // Step 2: Create invitation (Checkr hosts the consent + data collection flow)
+  const inviteRes = await fetch(`${CHECKR_API_URL}/invitations`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      candidate_id: candidateId,
+      package: "tasker_standard", // Standard gig worker package
+    }),
+  });
+
+  if (!inviteRes.ok) {
+    const error = await inviteRes.text();
+    throw new Error(`Checkr invitation error: ${inviteRes.status} — ${error}`);
+  }
+
+  const invitation = await inviteRes.json();
+
+  return {
+    candidateId,
+    invitationUrl: invitation.invitation_url,
+  };
+}
+
+/**
+ * Get the status of a background check report.
+ */
+export async function getCheckrReport(reportId: string): Promise<{
+  status: string;
+  result: string | null;
+  completedAt: string | null;
+}> {
+  const res = await fetch(`${CHECKR_API_URL}/reports/${reportId}`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) throw new Error(`Checkr API error: ${res.status}`);
+
+  const data = await res.json();
+  return {
+    status: data.status ?? "unknown",
+    result: data.result ?? null,
+    completedAt: data.completed_at ?? null,
+  };
+}

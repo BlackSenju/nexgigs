@@ -474,7 +474,27 @@ export default function MyProfilePage() {
             {Boolean(profile.identity_verified) ? (
               <span className="text-xs text-green-400 font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verified</span>
             ) : (
-              <Button variant="outline" size="sm">Verify</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/verify/persona", { method: "POST" });
+                    const data = await res.json();
+                    if (data.sessionUrl) {
+                      window.open(data.sessionUrl, "_blank");
+                    } else if (data.status === "already_verified") {
+                      setProfile({ ...profile!, identity_verified: true });
+                    } else if (data.error) {
+                      alert(data.error);
+                    }
+                  } catch {
+                    alert("Failed to start verification. Try again later.");
+                  }
+                }}
+              >
+                Verify ID
+              </Button>
             )}
           </div>
           <div className="flex items-center justify-between">
@@ -488,9 +508,39 @@ export default function MyProfilePage() {
             {Boolean(profile.background_checked) ? (
               <span className="text-xs text-green-400 font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Checked</span>
             ) : (
-              <Button variant="outline" size="sm">Start</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!Boolean(profile.identity_verified)}
+                onClick={async () => {
+                  if (!Boolean(profile.identity_verified)) {
+                    alert("Complete ID verification first.");
+                    return;
+                  }
+                  try {
+                    const res = await fetch("/api/verify/checkr", { method: "POST" });
+                    const data = await res.json();
+                    if (data.invitationUrl) {
+                      window.open(data.invitationUrl, "_blank");
+                    } else if (data.status === "already_checked") {
+                      setProfile({ ...profile!, background_checked: true });
+                    } else if (data.error) {
+                      alert(data.error);
+                    }
+                  } catch {
+                    alert("Failed to start background check. Try again later.");
+                  }
+                }}
+              >
+                {Boolean(profile.identity_verified) ? "Start Check" : "Verify ID First"}
+              </Button>
             )}
           </div>
+          {String(profile.checkr_status ?? "") === "processing" && (
+            <p className="text-xs text-yellow-400 flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Background check in progress...
+            </p>
+          )}
         </div>
       </div>
 
