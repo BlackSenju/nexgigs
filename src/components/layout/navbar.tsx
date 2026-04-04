@@ -47,9 +47,14 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <Link
             href={user ? "/dashboard" : "/"}
-            className="text-xl font-black text-brand-orange"
+            className="flex items-center gap-2"
           >
-            NexGigs
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/icon-192.png" alt="NexGigs" className="w-8 h-8 rounded-lg" />
+            <span className="text-xl font-black">
+              <span className="text-brand-orange">Nex</span>
+              <span className="text-white">Gigs</span>
+            </span>
           </Link>
 
           <div className="hidden sm:flex items-center gap-6">
