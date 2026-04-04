@@ -1,0 +1,42 @@
+{
+  "packageId": "com.nexgigs.app",
+  "host": "nexgigs.com",
+  "name": "NexGigs",
+  "launcherName": "NexGigs",
+  "display": "standalone",
+  "themeColor": "#FF4D00",
+  "navigationColor": "#0a0a0a",
+  "navigationColorDark": "#0a0a0a",
+  "navigationDividerColor": "#0a0a0a",
+  "navigationDividerColorDark": "#0a0a0a",
+  "backgroundColor": "#0a0a0a",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://nexgigs.com/icons/icon-512.png",
+  "maskableIconUrl": "https://nexgigs.com/icons/icon-512.png",
+  "monochromeIconUrl": "https://nexgigs.com/icons/icon-512.png",
+  "shortcuts": [
+    { "name": "Browse Jobs", "url": "/jobs", "icons": [{ "src": "https://nexgigs.com/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Post a Job", "url": "/jobs/post", "icons": [{ "src": "https://nexgigs.com/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Messages", "url": "/messages", "icons": [{ "src": "https://nexgigs.com/icons/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "signingKey": {
+    "path": "./nexgigs.keystore",
+    "alias": "nexgigs"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "splashScreenFadeOutDuration": 300,
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "orientation": "portrait"
+}
