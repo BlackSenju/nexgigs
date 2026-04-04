@@ -1,0 +1,10 @@
+com.nexgigs.app-core-1.1.0-0 C:\Users\jevau_gsp3lw9\.gradle\caches\8.9\transforms\624a26c73b66840d0d82d63bc3c7f8b0\transformed\core-1.1.0\res
+com.nexgigs.app-browser-1.4.0-1 C:\Users\jevau_gsp3lw9\.gradle\caches\8.9\transforms\f0abfc1a3891d4408403b376aae96b94\transformed\browser-1.4.0\res
+com.nexgigs.app-androidbrowserhelper-2.5.0-2 C:\Users\jevau_gsp3lw9\.gradle\caches\8.9\transforms\f720fa769390a4f424fd297a5a849671\transformed\androidbrowserhelper-2.5.0\res
+com.nexgigs.app-pngs-3 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\build\generated\res\pngs\release
+com.nexgigs.app-resValues-4 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\build\generated\res\resValues\release
+com.nexgigs.app-packageReleaseResources-5 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
+com.nexgigs.app-packageReleaseResources-6 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
+com.nexgigs.app-release-7 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\build\intermediates\merged_res\release\mergeReleaseResources
+com.nexgigs.app-main-8 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\src\main\res
+com.nexgigs.app-release-9 C:\Users\jevau_gsp3lw9\NexGigs\android-app\app\src\release\res

@@ -1,0 +1,36 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.nexgigs.app-mergeReleaseResources-5:/values-en-rXC/values-en-rXC.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\jevau_gsp3lw9\\.gradle\\caches\\8.9\\transforms\\624a26c73b66840d0d82d63bc3c7f8b0\\transformed\\core-1.1.0\\res\\values-en-rXC\\values-en-rXC.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "202",
+                        "endOffsets": "253"
+                    },
+                    "to": {
+                        "startLines": "6",
+                        "startColumns": "4",
+                        "startOffsets": "867",
+                        "endColumns": "202",
+                        "endOffsets": "1065"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\jevau_gsp3lw9\\.gradle\\caches\\8.9\\transforms\\f0abfc1a3891d4408403b376aae96b94\\transformed\\browser-1.4.0\\res\\values-en-rXC\\values-en-rXC.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,255,454,665",
+                        "endColumns": "199,198,210,201",
+                        "endOffsets": "250,449,660,862"
+                    }
+                }
+            ]
+        }
+    ]
+}

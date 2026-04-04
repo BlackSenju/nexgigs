@@ -1,0 +1,36 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.nexgigs.app-mergeReleaseResources-5:/values-hy/values-hy.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\jevau_gsp3lw9\\.gradle\\caches\\8.9\\transforms\\f0abfc1a3891d4408403b376aae96b94\\transformed\\browser-1.4.0\\res\\values-hy\\values-hy.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,159,262,373",
+                        "endColumns": "103,102,110,102",
+                        "endOffsets": "154,257,368,471"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\jevau_gsp3lw9\\.gradle\\caches\\8.9\\transforms\\624a26c73b66840d0d82d63bc3c7f8b0\\transformed\\core-1.1.0\\res\\values-hy\\values-hy.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "6",
+                        "startColumns": "4",
+                        "startOffsets": "476",
+                        "endColumns": "100",
+                        "endOffsets": "572"
+                    }
+                }
+            ]
+        }
+    ]
+}

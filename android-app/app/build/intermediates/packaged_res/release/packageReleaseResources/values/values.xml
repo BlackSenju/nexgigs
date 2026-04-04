@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NexGigs</string>
+    <style name="Theme.NexGigs" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0a0a0a</item>
+        <item name="android:statusBarColor">#FF4D00</item>
+        <item name="android:navigationBarColor">#0a0a0a</item>
+    </style>
+    <style name="Theme.NexGigs.Splash" parent="Theme.NexGigs">
+        <item name="android:windowBackground">#0a0a0a</item>
+    </style>
+</resources>
