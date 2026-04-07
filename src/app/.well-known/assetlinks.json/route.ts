@@ -7,6 +7,7 @@ const assetLinks = [
       namespace: "android_app",
       package_name: "com.nexgigs.app",
       sha256_cert_fingerprints: [
+        "EA:BB:CB:EC:9C:71:B9:B9:B0:8B:33:E5:20:F4:EC:B0:CC:FE:3D:B6:F0:20:F2:59:0F:39:22:DC:1B:EB:1C:6C",
         "2D:FE:7A:9B:16:BE:4E:A6:A4:F1:AA:B0:02:0E:C0:B7:F2:37:8A:0F:10:D8:8C:F7:83:7B:1A:B6:AF:30:82:C0",
       ],
     },
