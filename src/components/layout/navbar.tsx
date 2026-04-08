@@ -6,11 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { LogOut, Bell } from "lucide-react";
+import { getUnreadCount } from "@/lib/actions/notifications";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function Navbar() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<{ avatar_url?: string; first_name?: string; last_initial?: string } | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -23,6 +25,8 @@ export function Navbar() {
           .eq("id", data.user.id)
           .single()
           .then(({ data: p }) => setProfile(p));
+        // Fetch unread notification count
+        getUnreadCount().then(setUnreadCount).catch(() => {});
       }
     });
 
@@ -87,9 +91,14 @@ export function Navbar() {
                     XP
                   </Button>
                 </Link>
-                <button className="relative p-2 text-zinc-400 hover:text-white transition-colors" title="Notifications">
+                <Link href="/notifications" className="relative p-2 text-zinc-400 hover:text-white transition-colors" title="Notifications">
                   <Bell className="w-4 h-4" />
-                </button>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <Link href="/profile/me" title="My Profile" className="relative group">
                   <Avatar
                     src={profile?.avatar_url}
