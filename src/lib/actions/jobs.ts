@@ -77,12 +77,8 @@ export async function getJobById(jobId: string) {
 
   if (error) return { job: null, error: error.message };
 
-  // Increment view count (fire-and-forget)
-  supabase
-    .from("nexgigs_jobs")
-    .update({ views_count: (job.views_count ?? 0) + 1 })
-    .eq("id", jobId)
-    .then(() => {});
+  // Atomic view count increment (fire-and-forget, no race condition)
+  supabase.rpc("increment_views", { job_id_input: jobId }).then(() => {});
 
   // Get poster rating
   const { data: posterRating } = await supabase
@@ -239,11 +235,8 @@ export async function applyToJob(
   }
 
   // Increment application count
-  const currentCount = Number((job as Record<string, unknown>)?.applications_count ?? 0);
-  await supabase
-    .from("nexgigs_jobs")
-    .update({ applications_count: currentCount + 1 })
-    .eq("id", jobId);
+  // Atomic application count increment (no race condition)
+  await supabase.rpc("increment_applications", { job_id_input: jobId });
 
   // Fire-and-forget
   Promise.all([
