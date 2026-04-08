@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { improveJobDescription } from "@/lib/ai";
+import { improveJobDescription, professionalRewrite } from "@/lib/ai";
 import { moderateContent } from "@/lib/moderation";
 
 /**
@@ -53,6 +53,25 @@ export async function POST(request: NextRequest) {
         if (!price) suggestions.push("Adding a budget helps giggers know if the job is right for them.");
         if (suggestions.length === 0) suggestions.push("Your listing looks good!");
         return NextResponse.json({ suggestions, warnings: modResult.warnings });
+      }
+    }
+
+    if (type === "rewrite") {
+      try {
+        const result = await professionalRewrite({
+          title: title || "",
+          description: description || "",
+          category: category || "",
+          type: body.listingType === "shop" ? "shop" : "job",
+          price: price ? Number(price) : undefined,
+        });
+        return NextResponse.json({
+          rewrittenTitle: result.rewrittenTitle,
+          rewrittenDescription: result.rewrittenDescription,
+          warnings: modResult.warnings,
+        });
+      } catch {
+        return NextResponse.json({ error: "AI rewrite unavailable. Try again later." }, { status: 500 });
       }
     }
 

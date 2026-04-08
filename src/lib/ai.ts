@@ -152,6 +152,51 @@ Is this a legitimate product listing?`
 }
 
 /**
+ * Professional rewrite — transforms a rough description into a polished, professional listing.
+ * One-click improvement for both job postings and shop listings.
+ */
+export async function professionalRewrite(input: {
+  title: string;
+  description: string;
+  category: string;
+  type: "job" | "shop";
+  price?: number;
+}): Promise<{
+  rewrittenTitle: string;
+  rewrittenDescription: string;
+}> {
+  const result = await quickAI(
+    `You are a professional copywriter for NexGigs, a gig economy marketplace. Rewrite the user's listing to sound professional, clear, and trustworthy while keeping ALL original details and meaning. Do NOT add information that was not in the original. Make it concise but complete. Return JSON only: {"rewrittenTitle": "...", "rewrittenDescription": "..."}
+
+Rules:
+- Keep the same meaning and all details
+- Make it sound professional but approachable (not corporate)
+- Fix grammar and spelling
+- Organize into clear paragraphs if needed
+- Add bullet points for requirements if applicable
+- Keep it natural — this is a community marketplace, not a corporate job board
+- If the original is already good, just clean it up slightly`,
+    `Type: ${input.type} listing
+Category: ${input.category}
+${input.price ? `Budget: $${input.price}` : ""}
+
+Original title: ${input.title}
+Original description: ${input.description}
+
+Rewrite this to be professional and clear.`
+  );
+
+  try {
+    return JSON.parse(result);
+  } catch {
+    return {
+      rewrittenTitle: input.title,
+      rewrittenDescription: input.description,
+    };
+  }
+}
+
+/**
  * Generate a personalized weekly digest for a user.
  */
 export async function generateWeeklyDigest(input: {
