@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MapPin, Briefcase, Star, Zap } from "lucide-react";
+import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -61,13 +61,15 @@ export default async function DashboardPage() {
           <div className="mt-2 text-2xl font-black text-white">--</div>
           <div className="text-xs text-zinc-400">Avg Rating</div>
         </div>
-        <div className="p-4 rounded-xl bg-card border border-zinc-800">
-          <Zap className="w-5 h-5 text-brand-orange" />
-          <div className="mt-2 text-2xl font-black text-white">
-            {xp?.total_xp || 0}
+        <Link href="/rewards">
+          <div className="p-4 rounded-xl bg-card border border-zinc-800 hover:border-brand-orange/30 transition-colors">
+            <Zap className="w-5 h-5 text-brand-orange" />
+            <div className="mt-2 text-2xl font-black text-white">
+              {xp?.total_xp || 0}
+            </div>
+            <div className="text-xs text-brand-orange">Total XP →</div>
           </div>
-          <div className="text-xs text-zinc-400">Total XP</div>
-        </div>
+        </Link>
         <div className="p-4 rounded-xl bg-card border border-zinc-800">
           <div className="text-lg">$</div>
           <div className="mt-2 text-2xl font-black text-white">
@@ -78,34 +80,62 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 grid sm:grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-3">
         <Link href="/jobs">
-          <div className="p-6 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
-            <h3 className="text-lg font-bold text-white">Browse Jobs</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              Find gigs in your area and start earning
-            </p>
+          <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+            <Briefcase className="w-5 h-5 text-brand-orange mb-2" />
+            <h3 className="text-sm font-bold text-white">Browse Jobs</h3>
+            <p className="mt-0.5 text-xs text-zinc-400">Find gigs near you</p>
           </div>
         </Link>
         <Link href="/jobs/post">
-          <div className="p-6 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
-            <h3 className="text-lg font-bold text-white">Post a Job</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              Need something done? Post it and find help fast
-            </p>
+          <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+            <MapPin className="w-5 h-5 text-brand-orange mb-2" />
+            <h3 className="text-sm font-bold text-white">Post a Job</h3>
+            <p className="mt-0.5 text-xs text-zinc-400">Find help fast</p>
+          </div>
+        </Link>
+        <Link href="/shop">
+          <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+            <ShoppingBag className="w-5 h-5 text-brand-orange mb-2" />
+            <h3 className="text-sm font-bold text-white">Shop</h3>
+            <p className="mt-0.5 text-xs text-zinc-400">Buy and sell products & services</p>
+          </div>
+        </Link>
+        <Link href="/rewards">
+          <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+            <Award className="w-5 h-5 text-brand-orange mb-2" />
+            <h3 className="text-sm font-bold text-white">XP Rewards</h3>
+            <p className="mt-0.5 text-xs text-zinc-400">Spend your XP on badges & perks</p>
           </div>
         </Link>
       </div>
 
-      {/* Coming Soon */}
-      <div className="mt-6 p-6 rounded-xl border border-dashed border-zinc-700 text-center">
-        <p className="text-zinc-500">
-          Your job feed, active gigs, and alerts will appear here as you get started.
-        </p>
-        <Link href="/jobs" className="mt-4 inline-block">
-          <Button variant="outline" size="sm">
-            Explore Jobs
-          </Button>
+      {/* How to Earn XP */}
+      <div className="mt-6 p-4 rounded-xl bg-card border border-zinc-800">
+        <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-1.5">
+          <Zap className="w-4 h-4 text-brand-orange" /> How to Earn XP
+        </h3>
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50">
+            <span className="text-zinc-400">Complete a gig</span>
+            <span className="text-brand-orange font-bold">+100 XP</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50">
+            <span className="text-zinc-400">Get 5-star rating</span>
+            <span className="text-brand-orange font-bold">+75 XP</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50">
+            <span className="text-zinc-400">Leave a review</span>
+            <span className="text-brand-orange font-bold">+50 XP</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50">
+            <span className="text-zinc-400">First gig ever</span>
+            <span className="text-brand-orange font-bold">+500 XP</span>
+          </div>
+        </div>
+        <Link href="/rewards" className="block mt-2 text-center text-xs text-brand-orange hover:underline">
+          View all rewards & spend XP →
         </Link>
       </div>
     </div>
