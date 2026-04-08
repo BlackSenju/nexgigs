@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { applyToJob } from "@/lib/actions/jobs";
+import { trackJobView, trackViewDuration, toggleSaveJob, isJobSaved } from "@/lib/actions/analytics";
 import { Disclaimer } from "@/components/ui/disclaimer";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DISCLAIMERS } from "@/lib/legal";
@@ -36,6 +37,31 @@ export default function JobDetailPage() {
   const [applied, setApplied] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [viewStart] = useState(Date.now());
+
+  // Track view on mount
+  useEffect(() => {
+    if (id) {
+      trackJobView(id as string).catch(() => {});
+      isJobSaved(id as string).then(setSaved).catch(() => {});
+    }
+    // Track duration on unmount
+    return () => {
+      if (id) {
+        const seconds = Math.round((Date.now() - viewStart) / 1000);
+        if (seconds > 2) {
+          trackViewDuration(id as string, seconds).catch(() => {});
+        }
+      }
+    };
+  }, [id, viewStart]);
+
+  async function handleToggleSave() {
+    if (!id) return;
+    const result = await toggleSaveJob(id as string);
+    if (!result.error) setSaved(result.saved);
+  }
 
   useEffect(() => {
     async function fetchJob() {
@@ -136,8 +162,11 @@ export default function JobDetailPage() {
           <button className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-card transition-colors">
             <Share2 className="w-4 h-4" />
           </button>
-          <button className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-card transition-colors">
-            <Bookmark className="w-4 h-4" />
+          <button
+            onClick={handleToggleSave}
+            className={`p-2 rounded-lg transition-colors ${saved ? "text-brand-orange bg-brand-orange/10" : "text-zinc-400 hover:text-white hover:bg-card"}`}
+          >
+            <Bookmark className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
           </button>
         </div>
       </div>

@@ -77,8 +77,8 @@ export async function getJobById(jobId: string) {
 
   if (error) return { job: null, error: error.message };
 
-  // Atomic view count increment (fire-and-forget, no race condition)
-  supabase.rpc("increment_views", { job_id_input: jobId }).then(() => {});
+  // View tracking is now handled by trackJobView() in analytics.ts
+  // Called from the client-side job detail page component
 
   // Get poster rating
   const { data: posterRating } = await supabase
