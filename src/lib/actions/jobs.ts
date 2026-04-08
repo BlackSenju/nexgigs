@@ -6,6 +6,7 @@ import { aiModerateContent } from "@/lib/ai";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
+import { sendNotification } from "@/lib/actions/notifications";
 
 export async function getJobs(filters?: {
   category?: string;
@@ -274,6 +275,17 @@ export async function applyToJob(
     }),
     logAuditEvent(user.id, "job.applied", "job", jobId),
   ]).catch(() => {});
+
+  // Notify the job poster about the new application
+  if (job?.poster_id) {
+    sendNotification({
+      userId: job.poster_id,
+      type: "application",
+      title: "New application!",
+      body: `${profile?.first_name ?? "Someone"} applied to "${job.title}" with a bid of $${bidAmount ?? "open"}`,
+      link: `/jobs/${jobId}`,
+    }).catch(() => {});
+  }
 
   return { success: true };
 }
