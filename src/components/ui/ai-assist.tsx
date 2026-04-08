@@ -31,7 +31,11 @@ export function AIJobAssist({
   const [show, setShow] = useState(false);
 
   async function handleGetSuggestions() {
-    if (!title && !description) return;
+    if (!title && !description) {
+      setSuggestions(["Please enter a job title and description first."]);
+      setShow(true);
+      return;
+    }
     setLoading(true);
     setSuggestions([]);
     setImprovedDesc(null);
@@ -44,19 +48,30 @@ export function AIJobAssist({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "job_description",
-          title,
-          description,
-          category,
-          price,
+          title: title || "",
+          description: description || "",
+          category: category || "",
+          price: price || 0,
         }),
       });
+
+      if (!res.ok) {
+        
+        setSuggestions([`AI service returned an error (${res.status}). Your post can still be submitted.`]);
+        setShow(true);
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
 
-      if (data.blocked) {
+      if (data.error) {
+        setSuggestions([data.error]);
+      } else if (data.blocked) {
         setBlocked(true);
         setBlockReason(data.reason || "Content not allowed");
       } else {
-        setSuggestions(data.suggestions || []);
+        setSuggestions(data.suggestions || ["Your listing looks good!"]);
         setImprovedDesc(data.improvedDescription || null);
         setWarnings(data.warnings || []);
       }

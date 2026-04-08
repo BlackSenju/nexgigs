@@ -32,18 +32,28 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "job_description") {
-      const result = await improveJobDescription({
-        title: title || "",
-        description: description || "",
-        category: category || "",
-        price: price ? Number(price) : undefined,
-      });
+      try {
+        const result = await improveJobDescription({
+          title: title || "",
+          description: description || "",
+          category: category || "",
+          price: price ? Number(price) : undefined,
+        });
 
-      return NextResponse.json({
-        suggestions: result.suggestions,
-        improvedDescription: result.improvedDescription,
-        warnings: modResult.warnings,
-      });
+        return NextResponse.json({
+          suggestions: result.suggestions?.length ? result.suggestions : ["Your listing looks good! Consider adding more details about timeline and requirements."],
+          improvedDescription: result.improvedDescription,
+          warnings: modResult.warnings,
+        });
+      } catch {
+        // AI unavailable — return rule-based suggestions instead
+        const suggestions = [];
+        if (!title || title.length < 15) suggestions.push("Make your title more descriptive — specific titles get 2x more applicants.");
+        if (!description || description.length < 50) suggestions.push("Add more details to your description — what needs to be done, tools needed, timeline.");
+        if (!price) suggestions.push("Adding a budget helps giggers know if the job is right for them.");
+        if (suggestions.length === 0) suggestions.push("Your listing looks good!");
+        return NextResponse.json({ suggestions, warnings: modResult.warnings });
+      }
     }
 
     if (type === "moderate") {
