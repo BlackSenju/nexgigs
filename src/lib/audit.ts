@@ -32,6 +32,7 @@ type AuditAction =
   | "guild.created"
   | "guild.joined"
   | "shop.item_listed"
+  | "shop.item_deleted"
   | "shop.order_placed"
   | "subscription.upgraded"
   | "subscription.cancelled"
