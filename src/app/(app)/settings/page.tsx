@@ -224,6 +224,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Admin Panel — only visible to admins */}
+      {Boolean(profile.is_admin) && (
+        <div className="p-4 rounded-xl bg-brand-orange/5 border border-brand-orange/20 mb-4">
+          <h3 className="text-sm font-bold text-brand-orange mb-2 flex items-center gap-2"><Shield className="w-4 h-4" /> Admin</h3>
+          <Link href="/admin" className="flex items-center justify-between py-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><User className="w-4 h-4" /> Admin Dashboard</span><ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
       {/* Logout */}
       <Button variant="danger" className="w-full mb-8" onClick={handleLogout}>
         <LogOut className="w-4 h-4 mr-2" /> Log Out
