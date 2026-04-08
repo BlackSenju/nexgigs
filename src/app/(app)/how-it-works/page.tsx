@@ -12,7 +12,7 @@ import Link from "next/link";
 const FOR_GIGGERS = [
   { step: "1", title: "Create Your Profile", desc: "Sign up, add your skills, upload portfolio photos. The more complete your profile, the more jobs you get.", icon: User },
   { step: "2", title: "Browse Jobs Near You", desc: "Use the job feed to find gigs in your area. Filter by category, switch to map view, save jobs for later.", icon: Search },
-  { step: "3", title: "Apply With a Bid", desc: "Found a job you want? Submit your bid amount and a message explaining why you are the right person.", icon: PlusCircle },
+  { step: "3", title: "Apply With a Bid", desc: "Found a job you want? Submit your bid amount. Your profile, portfolio, and ratings speak for you.", icon: PlusCircle },
   { step: "4", title: "Get Hired and Communicate", desc: "The poster reviews all applicants and picks you. Use in-app messaging to coordinate details.", icon: MessageSquare },
   { step: "5", title: "Complete the Job and Get Paid", desc: "Do the work. The poster confirms completion. Money is released from escrow to your Stripe account.", icon: CreditCard },
   { step: "6", title: "Get Rated and Earn XP", desc: "Both parties rate each other. Earn XP for completed gigs, 5-star ratings, and milestones. Level up!", icon: Star },
@@ -35,7 +35,8 @@ const FEATURES_EXPLAINED = [
   { icon: Star, name: "Rating System", desc: "Both parties rate each other after every job. Quality, punctuality, and communication on a 5-star scale." },
   { icon: Zap, name: "XP and Levels", desc: "Earn XP for completing gigs, getting 5-star ratings, and hitting milestones. Level up from Task Starter to NexGigs Elite." },
   { icon: Award, name: "XP Rewards Store", desc: "Spend your XP on badges, profile highlights, and more. Cash rewards coming soon." },
-  { icon: ShoppingBag, name: "Shop", desc: "Sell digital products, templates, guides, and physical items. 10% platform commission." },
+  { icon: Briefcase, name: "Your Gigs Tab", desc: "Track everything in one place: Active gigs you are working, Completed gigs, and Jobs you posted. Tap any card to manage it." },
+  { icon: ShoppingBag, name: "Shop", desc: "Sell digital products, physical items, services, experiences, or subscriptions. Offer package tiers (Basic/Standard/Premium). 10% platform commission." },
   { icon: Ghost, name: "Ghost Wall", desc: "Users who no-show or abandon jobs 3+ times in 90 days appear on the public Ghost Wall of Shame." },
   { icon: Briefcase, name: "Guilds", desc: "Form teams with other giggers. Take on bigger jobs together. Minimum 15% pay floor per team member." },
 ];
