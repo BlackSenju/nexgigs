@@ -22,11 +22,11 @@ interface Reward {
 
 const REWARDS: Reward[] = [
   { id: "badge-color", name: "Custom Badge Color", description: "Customize your profile badge color", xpCost: 500, icon: Palette, category: "badge" },
-  { id: "featured-24h", name: "Featured in Search", description: "Appear at the top of search results for 24 hours", xpCost: 1000, icon: Eye, category: "boost" },
+  { id: "featured-24h", name: "Featured in Search", description: "Appear at the top of search results for 24 hours", xpCost: 1000, icon: Eye, category: "boost", comingSoon: true },
   { id: "trusted-badge", name: "Trusted Badge", description: "Show a \"Trusted\" badge on your profile permanently", xpCost: 2000, icon: CheckCircle, category: "badge" },
-  { id: "priority-alerts", name: "Priority Job Alerts", description: "See new jobs 1 hour before everyone else for 30 days", xpCost: 3000, icon: Bell, category: "feature" },
+  { id: "priority-alerts", name: "Priority Job Alerts", description: "See new jobs 1 hour before everyone else for 30 days", xpCost: 3000, icon: Bell, category: "feature", comingSoon: true },
   { id: "profile-highlight", name: "Gold Profile", description: "Gold border on your profile for 7 days", xpCost: 5000, icon: Crown, category: "badge" },
-  { id: "free-boost", name: "Free Job Boost", description: "Push one of your jobs to the top of the feed", xpCost: 7500, icon: Rocket, category: "boost" },
+  { id: "free-boost", name: "Free Job Boost", description: "Push one of your jobs to the top of the feed", xpCost: 7500, icon: Rocket, category: "boost", comingSoon: true },
   { id: "pro-badge", name: "NexGigs Pro Badge", description: "Permanent \"NexGigs Pro\" badge on your profile", xpCost: 10000, icon: Award, category: "badge" },
   { id: "cash-5", name: "$5 NexGigs Credit", description: "Redeem for $5 credit towards any gig", xpCost: 25000, icon: DollarSign, category: "cash", comingSoon: true },
   { id: "cash-10", name: "$10 NexGigs Credit", description: "Redeem for $10 credit towards any gig", xpCost: 50000, icon: DollarSign, category: "cash", comingSoon: true },

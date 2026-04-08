@@ -111,7 +111,7 @@ export default function SubscriptionPage() {
               variant={tier.current ? "secondary" : tier.popular ? "primary" : "outline"}
               disabled={tier.current}
             >
-              {tier.current ? "Current Plan" : `Upgrade to ${tier.name}`}
+              {tier.current ? "Current Plan" : `Coming Soon`}
             </Button>
           </div>
         ))}
