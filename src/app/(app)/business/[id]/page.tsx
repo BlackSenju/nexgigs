@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
-import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { getBusinessProfile, getBusinessListings } from "@/lib/actions/business";
 
@@ -152,6 +151,7 @@ export default function BusinessProfilePage() {
           {/* Logo placeholder */}
           <div className="w-16 h-16 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center flex-shrink-0">
             {profile.business_logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.business_logo_url}
                 alt={displayName}
