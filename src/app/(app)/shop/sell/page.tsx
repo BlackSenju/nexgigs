@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -8,12 +8,13 @@ import { Combobox } from "@/components/ui/combobox";
 import { BackButton } from "@/components/ui/back-button";
 import { AIJobAssist } from "@/components/ui/ai-assist";
 import { createShopListing } from "@/lib/actions/shop";
+import { createClient } from "@/lib/supabase/client";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import {
   ArrowLeft, ArrowRight, CheckCircle, Loader2,
   Package, FileText, BookOpen, Calendar, Repeat,
   Clock, Video, MapPin, Users, BookmarkCheck,
-  Sparkles, DollarSign, TrendingUp,
+  Sparkles, DollarSign, TrendingUp, Lock, Share2, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -103,6 +104,9 @@ export default function SellPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [createdItemId, setCreatedItemId] = useState<string | null>(null);
   const [pricingSuggestion, setPricingSuggestion] = useState<{
     suggestedPrice: number;
     priceRange: { low: number; high: number };
@@ -111,6 +115,28 @@ export default function SellPage() {
     tips: string[];
     subscriptionSuggestion?: string;
   } | null>(null);
+
+  const [userTier, setUserTier] = useState("free");
+
+  useEffect(() => {
+    async function loadTier() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      const { data } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("tier")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .single();
+      if (data?.tier) setUserTier(data.tier);
+    }
+    loadTier();
+  }, []);
+
+  const isPro = ["pro", "elite", "business_starter", "business_growth", "enterprise"].includes(userTier);
 
   const [form, setForm] = useState({
     listingType: "",
@@ -177,6 +203,7 @@ export default function SellPage() {
       return;
     }
 
+    if (result.item?.id) setCreatedItemId(result.item.id as string);
     setSubmitted(true);
     setSubmitting(false);
   }
@@ -189,7 +216,29 @@ export default function SellPage() {
         <p className="mt-2 text-zinc-400">Your listing is now live in the NexGigs Shop.</p>
         <div className="mt-6 flex flex-col gap-2">
           <Link href="/shop"><Button className="w-full">View Shop</Button></Link>
-          <Link href="/shop/sell"><Button variant="outline" className="w-full" onClick={() => { setSubmitted(false); setStep(0); setForm({ ...form, title: "", description: "", price: "" }); }}>List Another</Button></Link>
+          {userId && (
+            <Link href={`/shop/seller/${userId}`}>
+              <Button variant="outline" className="w-full">
+                <ExternalLink className="w-4 h-4 mr-2" /> View your shop
+              </Button>
+            </Link>
+          )}
+          {createdItemId && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${window.location.origin}/shop/${createdItemId}`);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2000);
+                } catch { /* fallback */ }
+              }}
+            >
+              <Share2 className="w-4 h-4 mr-2" /> {shareCopied ? "Link Copied!" : "Share your listing"}
+            </Button>
+          )}
+          <Link href="/shop/sell"><Button variant="outline" className="w-full" onClick={() => { setSubmitted(false); setStep(0); setCreatedItemId(null); setForm({ ...form, title: "", description: "", price: "" }); }}>List Another</Button></Link>
         </div>
       </div>
     );
@@ -431,22 +480,26 @@ export default function SellPage() {
                 <label className="block text-xs font-medium text-zinc-400 mb-1.5">Available Sizes (optional)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {["XS", "S", "M", "L", "XL", "2XL", "3XL", "One Size"].map((size) => {
-                    const selected = form.sizes.split(",").filter(Boolean).includes(size);
+                    const currentSizes = form.sizes.split(",").filter(Boolean);
+                    const selected = currentSizes.includes(size);
+                    const atFreeLimit = !isPro && currentSizes.length >= 1 && !selected;
                     return (
                       <button
                         key={size}
+                        disabled={atFreeLimit}
                         onClick={() => {
-                          const current = form.sizes.split(",").filter(Boolean);
                           const updated = selected
-                            ? current.filter((s) => s !== size)
-                            : [...current, size];
+                            ? currentSizes.filter((s) => s !== size)
+                            : [...currentSizes, size];
                           updateForm({ sizes: updated.join(",") });
                         }}
                         className={cn(
                           "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors",
                           selected
                             ? "border-brand-orange bg-brand-orange/10 text-white"
-                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                            : atFreeLimit
+                              ? "border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50"
+                              : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
                         )}
                       >
                         {size}
@@ -454,15 +507,36 @@ export default function SellPage() {
                     );
                   })}
                 </div>
+                {!isPro && (
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    <Link href="/subscription" className="text-brand-orange hover:underline">Pro members</Link> can offer all sizes
+                  </p>
+                )}
               </div>
 
               {/* Colors */}
-              <Input
-                label="Available Colors (optional)"
-                value={form.colors}
-                onChange={(e) => updateForm({ colors: e.target.value })}
-                placeholder="e.g. Black, White, Red, Navy"
-              />
+              <div>
+                <Input
+                  label="Available Colors (optional)"
+                  value={form.colors}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!isPro) {
+                      // Free users: allow only 1 color (no commas)
+                      const stripped = val.replace(/,/g, "");
+                      updateForm({ colors: stripped });
+                    } else {
+                      updateForm({ colors: val });
+                    }
+                  }}
+                  placeholder={isPro ? "e.g. Black, White, Red, Navy" : "e.g. Black"}
+                />
+                {!isPro && (
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    <Link href="/subscription" className="text-brand-orange hover:underline">Pro members</Link> can offer all colors
+                  </p>
+                )}
+              </div>
 
               {/* Custom variants */}
               <Input
@@ -504,40 +578,50 @@ export default function SellPage() {
           <h2 className="text-base font-bold text-white">Set Your Price</h2>
 
           {/* AI Pricing Assistant */}
-          <button
-            onClick={async () => {
-              setPricingLoading(true);
-              try {
-                const res = await fetch("/api/ai/suggest", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    type: "pricing",
-                    title: form.title,
-                    description: form.description,
-                    category: form.category,
-                    listingType: form.listingType,
-                    sessionDuration: form.sessionDuration,
-                    sessionFormat: form.sessionFormat,
-                    recurringInterval: form.recurringInterval,
-                  }),
-                });
-                if (res.ok) {
-                  const data = await res.json();
-                  setPricingSuggestion(data);
-                }
-              } catch { /* ignore */ }
-              setPricingLoading(false);
-            }}
-            disabled={pricingLoading || !form.title}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-brand-orange/30 bg-brand-orange/5 text-brand-orange hover:bg-brand-orange/10 transition-colors disabled:opacity-50"
-          >
-            {pricingLoading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing prices...</>
-            ) : (
-              <><Sparkles className="w-4 h-4" /> Help me price this</>
-            )}
-          </button>
+          {isPro ? (
+            <button
+              onClick={async () => {
+                setPricingLoading(true);
+                try {
+                  const res = await fetch("/api/ai/suggest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      type: "pricing",
+                      title: form.title,
+                      description: form.description,
+                      category: form.category,
+                      listingType: form.listingType,
+                      sessionDuration: form.sessionDuration,
+                      sessionFormat: form.sessionFormat,
+                      recurringInterval: form.recurringInterval,
+                    }),
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    setPricingSuggestion(data);
+                  }
+                } catch { /* ignore */ }
+                setPricingLoading(false);
+              }}
+              disabled={pricingLoading || !form.title}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-brand-orange/30 bg-brand-orange/5 text-brand-orange hover:bg-brand-orange/10 transition-colors disabled:opacity-50"
+            >
+              {pricingLoading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing prices...</>
+              ) : (
+                <><Sparkles className="w-4 h-4" /> Help me price this</>
+              )}
+            </button>
+          ) : (
+            <Link
+              href="/subscription"
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 transition-colors"
+            >
+              <Lock className="w-4 h-4" />
+              <span className="text-sm">Upgrade to Pro to get AI pricing suggestions</span>
+            </Link>
+          )}
 
           {/* AI Pricing Results */}
           {pricingSuggestion && (
@@ -691,66 +775,80 @@ export default function SellPage() {
           )}
 
           {/* Package tiers / Bundle deals — available for ALL listing types */}
-          <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
-            <h3 className="text-xs font-bold text-white">
-              {form.listingType === "product" ? "Bundle Deals (Optional — sell more per order)" : "Package Tiers (Optional — increases sales by 40%)"}
-            </h3>
-            <p className="text-[10px] text-zinc-500">
-              {form.listingType === "product"
-                ? "Example: Single item vs 2-piece set vs Full collection. Bundles increase average order value."
-                : form.listingType === "service" || form.listingType === "subscription"
-                  ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up materials"
-                  : form.listingType === "experience"
-                    ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time after"
-                    : "Example: Basic = template only, Standard = template + tutorial video, Premium = full bundle + email support"}
-            </p>
-            <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  label={form.listingType === "product" ? "Single $" : "Basic $"}
-                  value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })}
-                  placeholder={form.listingType === "product" ? "40" : "25"}
-                />
-                <Input
-                  label={form.listingType === "product" ? "2-Piece $" : "Standard $"}
-                  value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })}
-                  placeholder={form.listingType === "product" ? "70" : "50"}
-                />
-                <Input
-                  label={form.listingType === "product" ? "Bundle $" : "Premium $"}
-                  value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })}
-                  placeholder={form.listingType === "product" ? "95" : "100"}
-                />
+          {isPro ? (
+            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+              <h3 className="text-xs font-bold text-white">
+                {form.listingType === "product" ? "Bundle Deals (Optional — sell more per order)" : "Package Tiers (Optional — increases sales by 40%)"}
+              </h3>
+              <p className="text-[10px] text-zinc-500">
+                {form.listingType === "product"
+                  ? "Example: Single item vs 2-piece set vs Full collection. Bundles increase average order value."
+                  : form.listingType === "service" || form.listingType === "subscription"
+                    ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up materials"
+                    : form.listingType === "experience"
+                      ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time after"
+                      : "Example: Basic = template only, Standard = template + tutorial video, Premium = full bundle + email support"}
+              </p>
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    label={form.listingType === "product" ? "Single $" : "Basic $"}
+                    value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })}
+                    placeholder={form.listingType === "product" ? "40" : "25"}
+                  />
+                  <Input
+                    label={form.listingType === "product" ? "2-Piece $" : "Standard $"}
+                    value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })}
+                    placeholder={form.listingType === "product" ? "70" : "50"}
+                  />
+                  <Input
+                    label={form.listingType === "product" ? "Bundle $" : "Premium $"}
+                    value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })}
+                    placeholder={form.listingType === "product" ? "95" : "100"}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    label={form.listingType === "product" ? "Single item" : "Basic includes"}
+                    value={form.basicDescription} onChange={(e) => updateForm({ basicDescription: e.target.value })}
+                    placeholder={form.listingType === "product" ? "e.g. T-shirt only" : "What's in Basic?"}
+                  />
+                  <Input
+                    label={form.listingType === "product" ? "2-Piece set" : "Standard includes"}
+                    value={form.standardDescription} onChange={(e) => updateForm({ standardDescription: e.target.value })}
+                    placeholder={form.listingType === "product" ? "e.g. Shirt + hat" : "What's in Standard?"}
+                  />
+                  <Input
+                    label={form.listingType === "product" ? "Full bundle" : "Premium includes"}
+                    value={form.premiumDescription} onChange={(e) => updateForm({ premiumDescription: e.target.value })}
+                    placeholder={form.listingType === "product" ? "e.g. Shirt + hat + bag" : "What's in Premium?"}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  label={form.listingType === "product" ? "Single item" : "Basic includes"}
-                  value={form.basicDescription} onChange={(e) => updateForm({ basicDescription: e.target.value })}
-                  placeholder={form.listingType === "product" ? "e.g. T-shirt only" : "What's in Basic?"}
-                />
-                <Input
-                  label={form.listingType === "product" ? "2-Piece set" : "Standard includes"}
-                  value={form.standardDescription} onChange={(e) => updateForm({ standardDescription: e.target.value })}
-                  placeholder={form.listingType === "product" ? "e.g. Shirt + hat" : "What's in Standard?"}
-                />
-                <Input
-                  label={form.listingType === "product" ? "Full bundle" : "Premium includes"}
-                  value={form.premiumDescription} onChange={(e) => updateForm({ premiumDescription: e.target.value })}
-                  placeholder={form.listingType === "product" ? "e.g. Shirt + hat + bag" : "What's in Premium?"}
-                />
-              </div>
+              {form.listingType === "product" && (form.priceBasic || form.priceStandard || form.pricePremium) && (
+                <div className="flex items-center gap-1.5 text-[10px] text-green-400">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>
+                    {form.pricePremium && form.priceBasic
+                      ? `Buyers save $${(Number(form.priceBasic) * 3 - Number(form.pricePremium)).toFixed(0)} on the bundle vs buying separately`
+                      : "Bundle discounts encourage bigger orders"}
+                  </span>
+                </div>
+              )}
             </div>
-            {form.listingType === "product" && (form.priceBasic || form.priceStandard || form.pricePremium) && (
-              <div className="flex items-center gap-1.5 text-[10px] text-green-400">
-                <TrendingUp className="w-3 h-3" />
-                <span>
-                  {form.pricePremium && form.priceBasic
-                    ? `Buyers save $${(Number(form.priceBasic) * 3 - Number(form.pricePremium)).toFixed(0)} on the bundle vs buying separately`
-                    : "Bundle discounts encourage bigger orders"}
-                </span>
+          ) : (
+            <Link href="/subscription" className="block">
+              <div className="p-4 rounded-xl border border-zinc-700 bg-zinc-800/50 flex items-center gap-3 hover:border-zinc-600 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Unlock Bundle Deals</p>
+                  <p className="text-xs text-zinc-400">Pro sellers earn 40% more per order</p>
+                </div>
               </div>
-            )}
-          </div>
+            </Link>
+          )}
 
           {/* Refund policy */}
           <Combobox options={REFUND_OPTIONS} value={form.refundPolicy} onChange={(val) => updateForm({ refundPolicy: val })} label="Refund Policy" />

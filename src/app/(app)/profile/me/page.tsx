@@ -7,7 +7,7 @@ import { uploadPortfolioItem, deletePortfolioItem } from "@/lib/actions/uploads"
 import {
   MapPin, Shield, Settings, Plus, Loader2, Trash2,
   Star, Briefcase, CheckCircle, Image as ImageIcon,
-  ShoppingBag, MessageSquare, Grid3X3,
+  ShoppingBag, MessageSquare, Grid3X3, Share2, ExternalLink,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,15 @@ export default function MyProfilePage() {
   const portfolioInputRef = useRef<HTMLInputElement>(null);
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioCategory, setPortfolioCategory] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [shopCopied, setShopCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
 
       const [profileRes, skillsRes, portfolioRes, xpRes, ratingRes, reviewsRes, shopRes, activeRes, completedRes, postedRes] = await Promise.all([
         supabase.from("nexgigs_profiles").select("*").eq("id", user.id).single(),
@@ -208,6 +211,28 @@ export default function MyProfilePage() {
       {/* Shop Tab */}
       {activeTab === "Shop" && (
         <div>
+          {userId && (
+            <div className="flex gap-2 mb-3">
+              <Link href={`/shop/seller/${userId}`} className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> View my public shop
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`https://nexgigs.com/shop/seller/${userId}`);
+                    setShopCopied(true);
+                    setTimeout(() => setShopCopied(false), 2000);
+                  } catch { /* fallback */ }
+                }}
+              >
+                <Share2 className="w-3.5 h-3.5 mr-1.5" /> {shopCopied ? "Copied!" : "Share my shop"}
+              </Button>
+            </div>
+          )}
           <Link href="/shop/sell"><button className="w-full mb-3 p-3 rounded-xl border border-dashed border-zinc-700 text-center hover:border-brand-orange/50 transition-colors"><ShoppingBag className="w-5 h-5 text-zinc-500 mx-auto" /><span className="text-xs text-zinc-500 mt-1 block">List something for sale</span></button></Link>
           {shopItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">

@@ -138,7 +138,12 @@ export default function ShopPage() {
                   </h3>
                   {item.seller && (
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      {item.seller.first_name} {item.seller.last_initial}.
+                      <span
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/shop/seller/${item.seller!.id}`; }}
+                        className="hover:text-brand-orange transition-colors cursor-pointer"
+                      >
+                        {item.seller.first_name} {item.seller.last_initial}.
+                      </span>
                       {item.seller.city ? ` · ${item.seller.city}` : ""}
                     </p>
                   )}

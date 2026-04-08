@@ -7,6 +7,7 @@ import { BackButton } from "@/components/ui/back-button";
 import {
   ShoppingBag, Loader2, Clock, MapPin, Users,
   FileText, Package, BookOpen, Calendar, Repeat, MessageSquare,
+  Share2, ExternalLink,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
@@ -76,6 +77,7 @@ export default function ShopItemPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<"basic" | "standard" | "premium" | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -262,34 +264,58 @@ export default function ShopItemPage() {
 
       {/* Seller */}
       {item.seller && (
-        <Link href={`/profile/${item.seller.id}`}>
-          <div className="mt-6 p-4 rounded-xl bg-card border border-zinc-800 flex items-center gap-3 hover:border-zinc-600 transition-colors">
-            <Avatar
-              src={item.seller.avatar_url}
-              firstName={item.seller.first_name}
-              lastInitial={item.seller.last_initial}
-              size="md"
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white">
-                  {item.seller.first_name} {item.seller.last_initial}.
+        <>
+          <Link href={`/profile/${item.seller.id}`}>
+            <div className="mt-6 p-4 rounded-xl bg-card border border-zinc-800 flex items-center gap-3 hover:border-zinc-600 transition-colors">
+              <Avatar
+                src={item.seller.avatar_url}
+                firstName={item.seller.first_name}
+                lastInitial={item.seller.last_initial}
+                size="md"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-white">
+                    {item.seller.first_name} {item.seller.last_initial}.
+                  </span>
+                </div>
+                <span className="text-xs text-zinc-500">
+                  {item.seller.city}, {item.seller.state}
                 </span>
               </div>
-              <span className="text-xs text-zinc-500">
-                {item.seller.city}, {item.seller.state}
-              </span>
             </div>
-          </div>
-        </Link>
+          </Link>
+          <Link
+            href={`/shop/seller/${item.seller.id}`}
+            className="flex items-center justify-center gap-1.5 mt-2 text-xs text-brand-orange hover:underline"
+          >
+            <ExternalLink className="w-3 h-3" />
+            View all listings from {item.seller.first_name}
+          </Link>
+        </>
       )}
 
       {/* Actions */}
       {!isOwner ? (
         <>
-          <Button size="lg" className="w-full mt-6">
-            Buy Now — ${displayPrice}
-          </Button>
+          <div className="flex gap-2 mt-6">
+            <Button size="lg" className="flex-1">
+              Buy Now — ${displayPrice}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2000);
+                } catch { /* fallback */ }
+              }}
+            >
+              {shareCopied ? "Copied!" : <Share2 className="w-4 h-4" />}
+            </Button>
+          </div>
           {item.seller && (
             <Link href={`/messages?to=${item.seller.id}`}>
               <Button variant="outline" className="w-full mt-2">
@@ -299,8 +325,23 @@ export default function ShopItemPage() {
           )}
         </>
       ) : (
-        <div className="mt-6 p-3 rounded-xl bg-card border border-zinc-800 text-center">
-          <p className="text-sm text-zinc-400">This is your listing</p>
+        <div className="mt-6 space-y-2">
+          <div className="p-3 rounded-xl bg-card border border-zinc-800 text-center">
+            <p className="text-sm text-zinc-400">This is your listing</p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(window.location.href);
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+              } catch { /* fallback */ }
+            }}
+          >
+            <Share2 className="w-4 h-4 mr-2" /> {shareCopied ? "Link Copied!" : "Share Listing"}
+          </Button>
         </div>
       )}
 
