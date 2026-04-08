@@ -35,9 +35,11 @@ export default function JobDetailPage() {
   const [bidAmount, setBidAmount] = useState("");
   
   const [applied, setApplied] = useState(false);
+  const [appliedBid, setAppliedBid] = useState<number | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [viewStart] = useState(Date.now());
 
   // Track view on mount
@@ -87,16 +89,24 @@ export default function JobDetailPage() {
         ]);
         setJob({ ...data, poster_rating: rating, poster_xp: xp });
 
-        // Check if current user already applied
+        // Check if current user already applied or is the poster
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Check if user is the job poster
+          if (data.poster_id === user.id) {
+            setIsOwner(true);
+          }
+
           const { data: existing } = await supabase
             .from("nexgigs_applications")
-            .select("id")
+            .select("id, bid_amount")
             .eq("job_id", id)
             .eq("gigger_id", user.id)
             .maybeSingle();
-          if (existing) setApplied(true);
+          if (existing) {
+            setApplied(true);
+            setAppliedBid(existing.bid_amount);
+          }
         }
       }
       setLoading(false);
@@ -118,6 +128,7 @@ export default function JobDetailPage() {
       return;
     }
     setApplied(true);
+    setAppliedBid(bidAmount ? Number(bidAmount) : null);
     setShowApply(false);
     setSubmitting(false);
   }
@@ -298,10 +309,19 @@ export default function JobDetailPage() {
 
       {/* Apply section */}
       <div className="mt-6 sticky bottom-20 sm:bottom-4">
-        {applied ? (
+        {isOwner ? (
+          <div className="p-4 rounded-xl bg-card border border-zinc-800 text-center">
+            <p className="text-sm text-zinc-400">This is your job posting</p>
+            <Link href={`/jobs/${id}/applicants`}>
+              <Button variant="outline" size="sm" className="mt-2">View Applicants</Button>
+            </Link>
+          </div>
+        ) : applied ? (
           <div className="p-4 rounded-xl bg-green-900/30 border border-green-700/50 text-center">
             <CheckCircle className="w-6 h-6 text-green-400 mx-auto" />
             <p className="mt-2 text-sm font-medium text-green-300">Application submitted!</p>
+            {appliedBid && <p className="text-xs text-green-400/70 mt-1">Your bid: ${appliedBid}</p>}
+            <p className="text-xs text-zinc-500 mt-1">The poster will review your profile and bid.</p>
           </div>
         ) : showApply ? (
           <div className="p-4 rounded-xl bg-card border border-zinc-700 space-y-3">
