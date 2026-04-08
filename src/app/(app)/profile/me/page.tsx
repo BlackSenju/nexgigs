@@ -108,10 +108,10 @@ export default function MyProfilePage() {
               <MapPin className="w-3 h-3" />
               {profile.neighborhood ? `${profile.neighborhood as string}, ` : ""}{profile.city as string}, {profile.state as string}
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
+            <Link href="/rewards" className="flex items-center gap-1.5 mt-1 hover:opacity-80 transition-opacity">
               <span className="text-xs font-bold text-brand-orange">Lvl {Number(xp?.current_level ?? 1)}</span>
               <span className="text-[10px] text-zinc-500">{String(xp?.level_title ?? "Task Starter")}</span>
-            </div>
+            </Link>
           </div>
         </div>
         <Link href="/settings"><Button variant="ghost" size="sm"><Settings className="w-4 h-4" /></Button></Link>
@@ -133,7 +133,7 @@ export default function MyProfilePage() {
       <div className="flex items-center justify-around py-3 mb-4 border-y border-zinc-800">
         <div className="text-center"><div className="text-lg font-black text-white">{Number(xp?.gigs_completed ?? 0)}</div><div className="text-[10px] text-zinc-500">Gigs</div></div>
         <div className="text-center"><div className="text-lg font-black text-white">{avgRating > 0 ? avgRating.toFixed(1) : "--"}</div><div className="text-[10px] text-zinc-500">{totalRatings > 0 ? `${totalRatings} Reviews` : "Rating"}</div></div>
-        <div className="text-center"><div className="text-lg font-black text-brand-orange">{Number(xp?.total_xp ?? 0)}</div><div className="text-[10px] text-zinc-500">XP</div></div>
+        <Link href="/rewards" className="text-center hover:opacity-80 transition-opacity"><div className="text-lg font-black text-brand-orange">{Number(xp?.total_xp ?? 0)}</div><div className="text-[10px] text-brand-orange">XP →</div></Link>
         <div className="text-center"><div className="text-lg font-black text-green-400">${Number(xp?.total_earned ?? 0).toFixed(0)}</div><div className="text-[10px] text-zinc-500">Earned</div></div>
       </div>
 
