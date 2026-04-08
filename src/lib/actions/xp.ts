@@ -6,9 +6,29 @@ import { notifyDiscord } from "@/lib/discord";
 
 type XPAction = keyof typeof XP_ACTIONS;
 
+// Daily XP cap per user (prevents gaming)
+const DAILY_XP_CAP = 1000;
+
+// Cooldown: max times an action can award XP per day
+const ACTION_DAILY_LIMITS: Partial<Record<XPAction, number>> = {
+  gig_complete: 10,        // Max 10 gig completions per day (1000 XP)
+  five_star_rating: 5,     // Max 5 five-star ratings per day (375 XP)
+  detailed_review_left: 5, // Max 5 reviews per day (250 XP)
+};
+
+// One-time actions that can only ever be awarded once
+const ONE_TIME_ACTIONS: XPAction[] = [
+  "first_gig_ever",
+  "first_job_posted",
+  "five_gigs_milestone",
+  "ten_gigs_milestone",
+  "twentyfive_gigs_milestone",
+  "fifty_gigs_milestone",
+];
+
 /**
  * Award XP to a user for a specific action.
- * Automatically updates level and title.
+ * Includes rate limiting: daily XP cap + per-action cooldowns.
  */
 export async function awardXP(
   userId: string,
@@ -17,6 +37,51 @@ export async function awardXP(
 ) {
   const supabase = createClient();
   const xpAmount = XP_ACTIONS[action];
+
+  // Check one-time actions — don't award twice
+  if (ONE_TIME_ACTIONS.includes(action)) {
+    const { data: existing } = await supabase
+      .from("nexgigs_xp")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("action_type", action)
+      .maybeSingle();
+
+    if (existing) {
+      return { xpAwarded: 0, reason: "Already awarded" };
+    }
+  }
+
+  // Check daily XP cap
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const { data: todayXp } = await supabase
+    .from("nexgigs_xp")
+    .select("xp_amount")
+    .eq("user_id", userId)
+    .gte("created_at", todayStart.toISOString());
+
+  const totalToday = (todayXp ?? []).reduce((sum, row) => sum + Number(row.xp_amount), 0);
+
+  if (totalToday >= DAILY_XP_CAP) {
+    return { xpAwarded: 0, reason: "Daily XP cap reached" };
+  }
+
+  // Check per-action daily limit
+  const actionLimit = ACTION_DAILY_LIMITS[action];
+  if (actionLimit) {
+    const { count } = await supabase
+      .from("nexgigs_xp")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("action_type", action)
+      .gte("created_at", todayStart.toISOString());
+
+    if ((count ?? 0) >= actionLimit) {
+      return { xpAwarded: 0, reason: `Daily ${action} limit reached` };
+    }
+  }
 
   // Log XP event
   await supabase.from("nexgigs_xp").insert({

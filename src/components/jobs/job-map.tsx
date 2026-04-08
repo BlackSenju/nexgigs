@@ -137,6 +137,6 @@ export function JobMap({
   }
 
   return (
-    <div ref={mapContainer} className="w-full h-full rounded-xl overflow-hidden" />
+    <div ref={mapContainer} className="w-full h-full rounded-xl overflow-hidden" style={{ minHeight: "320px" }} />
   );
 }
