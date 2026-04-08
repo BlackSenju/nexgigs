@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -10,7 +10,7 @@ import { AIJobAssist } from "@/components/ui/ai-assist";
 import { createShopListing } from "@/lib/actions/shop";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import {
-  ArrowLeft, ArrowRight, CheckCircle, Loader2, Plus,
+  ArrowLeft, ArrowRight, CheckCircle, Loader2,
   Package, FileText, BookOpen, Calendar, Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,8 +49,6 @@ export default function SellPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [form, setForm] = useState({
     listingType: "",
     title: "",
