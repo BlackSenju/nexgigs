@@ -63,7 +63,8 @@ export async function redeemReward(rewardKey: string) {
   await supabase.from("nexgigs_xp").insert({
     user_id: user.id,
     xp_amount: -reward.xp,
-    action_type: "reward_redeemed" as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    action_type: "reward_redeemed" as any, // Not in XP_ACTIONS enum but valid for logging
     description: `Redeemed: ${reward.description}`,
   });
 
