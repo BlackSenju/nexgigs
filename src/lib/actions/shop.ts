@@ -141,3 +141,34 @@ export async function getShopListings(filters?: {
   const { data } = await query;
   return data ?? [];
 }
+
+/**
+ * Delete (deactivate) a shop listing. Only the seller can do this.
+ */
+export async function deleteShopListing(itemId: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify ownership
+  const { data: item } = await supabase
+    .from("nexgigs_shop_items")
+    .select("seller_id")
+    .eq("id", itemId)
+    .single();
+
+  if (!item) return { error: "Listing not found" };
+  if (item.seller_id !== user.id) return { error: "You can only delete your own listings" };
+
+  // Soft delete — set is_active to false
+  const { error } = await supabase
+    .from("nexgigs_shop_items")
+    .update({ is_active: false })
+    .eq("id", itemId);
+
+  if (error) return { error: error.message };
+
+  await logAuditEvent(user.id, "shop.item_deleted", "shop_item", itemId, {});
+
+  return { success: true };
+}

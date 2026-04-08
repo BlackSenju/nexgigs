@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPortfolioItem, deletePortfolioItem } from "@/lib/actions/uploads";
+import { deleteShopListing } from "@/lib/actions/shop";
 import {
   MapPin, Shield, Settings, Plus, Loader2, Trash2,
   Star, Briefcase, CheckCircle, Image as ImageIcon,
@@ -237,10 +238,25 @@ export default function MyProfilePage() {
           {shopItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {shopItems.map((item) => (
-                <div key={item.id as string} className="p-3 rounded-xl bg-card border border-zinc-800">
-                  <h4 className="text-sm font-medium text-white truncate">{item.title as string}</h4>
-                  <p className="text-sm font-bold text-brand-orange mt-1">${Number(item.price)}</p>
-                  <p className="text-[10px] text-zinc-500">{Number(item.total_sold)} sold</p>
+                <div key={item.id as string} className="p-3 rounded-xl bg-card border border-zinc-800 relative group">
+                  <Link href={`/shop/${item.id}`}>
+                    <h4 className="text-sm font-medium text-white truncate">{item.title as string}</h4>
+                    <p className="text-sm font-bold text-brand-orange mt-1">${Number(item.price)}</p>
+                    <p className="text-[10px] text-zinc-500">{Number(item.total_sold)} sold</p>
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Delete this listing? It will be removed from the shop.")) return;
+                      const result = await deleteShopListing(item.id as string);
+                      if (!result.error) {
+                        setShopItems(shopItems.filter((i) => i.id !== item.id));
+                      }
+                    }}
+                    className="absolute top-2 right-2 p-1 rounded-full bg-zinc-800/80 text-zinc-500 hover:text-brand-red hover:bg-brand-red/10 opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete listing"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
                 </div>
               ))}
             </div>

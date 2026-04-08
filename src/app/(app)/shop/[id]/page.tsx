@@ -7,12 +7,13 @@ import { BackButton } from "@/components/ui/back-button";
 import {
   ShoppingBag, Loader2, Clock, MapPin, Users,
   FileText, Package, BookOpen, Calendar, Repeat, MessageSquare,
-  Share2, ExternalLink,
+  Share2, ExternalLink, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { deleteShopListing } from "@/lib/actions/shop";
 
 type ShopItem = {
   id: string;
@@ -73,6 +74,7 @@ const REFUND_LABELS: Record<string, string> = {
 
 export default function ShopItemPage() {
   const params = useParams();
+  const router = useRouter();
   const [item, setItem] = useState<ShopItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<"basic" | "standard" | "premium" | null>(null);
@@ -341,6 +343,19 @@ export default function ShopItemPage() {
             }}
           >
             <Share2 className="w-4 h-4 mr-2" /> {shareCopied ? "Link Copied!" : "Share Listing"}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full text-brand-red border-red-900 hover:bg-brand-red/10"
+            onClick={async () => {
+              if (!confirm("Delete this listing? It will be removed from the shop.")) return;
+              const result = await deleteShopListing(item.id);
+              if (!result.error) {
+                router.push("/profile/me");
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Delete Listing
           </Button>
         </div>
       )}
