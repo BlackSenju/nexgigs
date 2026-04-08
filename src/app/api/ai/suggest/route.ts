@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { improveJobDescription, professionalRewrite } from "@/lib/ai";
 import { moderateContent } from "@/lib/moderation";
+import { checkAIUsage, recordAIUsage } from "@/lib/actions/ai-usage";
 
 /**
  * POST /api/ai/suggest
@@ -17,6 +18,31 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { type, title, description, category, price, content } = body;
+
+  // Map request type to feature for usage tracking
+  const featureMap: Record<string, string> = {
+    job_description: "tips",
+    rewrite: "rewrite",
+    matching: "matching",
+  };
+  const feature = featureMap[type];
+
+  // Check AI usage limits (skip for moderation-only requests)
+  if (feature) {
+    const usage = await checkAIUsage(feature);
+    if (!usage.allowed) {
+      return NextResponse.json(
+        {
+          error: `You've reached your daily ${feature} limit. Upgrade your plan for more AI features.`,
+          upgrade: true,
+          remaining: 0,
+          limit: usage.limit,
+          tier: usage.tier,
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   try {
     // Content moderation first — block if prohibited
@@ -39,6 +65,8 @@ export async function POST(request: NextRequest) {
           category: category || "",
           price: price ? Number(price) : undefined,
         });
+
+        await recordAIUsage("tips");
 
         return NextResponse.json({
           suggestions: result.suggestions?.length ? result.suggestions : ["Your listing looks good! Consider adding more details about timeline and requirements."],
@@ -65,6 +93,8 @@ export async function POST(request: NextRequest) {
           type: body.listingType === "shop" ? "shop" : "job",
           price: price ? Number(price) : undefined,
         });
+        await recordAIUsage("rewrite");
+
         return NextResponse.json({
           rewrittenTitle: result.rewrittenTitle,
           rewrittenDescription: result.rewrittenDescription,
