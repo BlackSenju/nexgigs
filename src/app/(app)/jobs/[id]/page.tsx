@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { applyToJob } from "@/lib/actions/jobs";
 import { Disclaimer } from "@/components/ui/disclaimer";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { DISCLAIMERS } from "@/lib/legal";
 import {
   MapPin,
@@ -279,12 +280,13 @@ export default function JobDetailPage() {
             {applyError && (
               <div className="p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{applyError}</div>
             )}
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400">Your bid ($)</label>
-              <input type="number" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={String(job.price ?? "")}
-                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange" />
-            </div>
+            <CurrencyInput
+              label="Your bid"
+              value={bidAmount}
+              onChange={setBidAmount}
+              placeholder={job.price ? String(job.price) : "0.00"}
+              min={10}
+            />
             <div className="space-y-1">
               <label className="text-xs text-zinc-400">Message to poster</label>
               <textarea value={message} onChange={(e) => setMessage(e.target.value)}
