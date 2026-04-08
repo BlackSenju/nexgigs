@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit";
+import { sendNotification } from "@/lib/actions/notifications";
 
 /**
  * Get all applications for a specific job (poster only).
@@ -69,6 +70,13 @@ export async function acceptApplication(applicationId: string, jobId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
+  // Fetch application details for notification
+  const { data: application } = await supabase
+    .from("nexgigs_applications")
+    .select("gigger_id")
+    .eq("id", applicationId)
+    .single();
+
   // Update application status
   const { error } = await supabase
     .from("nexgigs_applications")
@@ -92,6 +100,23 @@ export async function acceptApplication(applicationId: string, jobId: string) {
     .eq("id", jobId);
 
   await logAuditEvent(user.id, "job.hired", "application", applicationId, { jobId });
+
+  // Notify the hired gigger
+  if (application?.gigger_id) {
+    const { data: job } = await supabase
+      .from("nexgigs_jobs")
+      .select("title")
+      .eq("id", jobId)
+      .single();
+
+    sendNotification({
+      userId: application.gigger_id,
+      type: "hired",
+      title: "You've been hired!",
+      body: `You've been hired for "${job?.title ?? "a gig"}"`,
+      link: "/gigs",
+    }).catch(() => {});
+  }
 
   return { success: true };
 }
