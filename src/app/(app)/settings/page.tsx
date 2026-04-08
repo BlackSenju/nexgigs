@@ -232,7 +232,7 @@ export default function SettingsPage() {
                   alert(data.error || "Failed to start payment setup. Make sure STRIPE_SECRET_KEY is configured.");
                   if (btn) btn.textContent = "Set Up Payments";
                 }
-              } catch (err) {
+              } catch {
                 alert("Payment setup failed. Check your internet connection and try again.");
                 if (btn) btn.textContent = "Set Up Payments";
               }
