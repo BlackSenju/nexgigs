@@ -29,6 +29,9 @@ export function AIJobAssist({
   const [blocked, setBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState("");
   const [show, setShow] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [rewrittenTitle, setRewrittenTitle] = useState<string | null>(null);
 
   async function handleGetSuggestions() {
     if (!title && !description) {
@@ -83,22 +86,63 @@ export function AIJobAssist({
     setLoading(false);
   }
 
+  async function handleRewrite() {
+    if (!title && !description) return;
+    setRewriting(true);
+    try {
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "rewrite", title, description, category, price }),
+      });
+      const data = await res.json();
+      if (data.rewrittenDescription && onApplySuggestion) {
+        setRewrittenTitle(data.rewrittenTitle || null);
+        setImprovedDesc(data.rewrittenDescription);
+        setShow(true);
+      } else if (data.error) {
+        setSuggestions([data.error]);
+        setShow(true);
+      }
+    } catch {
+      setSuggestions(["Rewrite service unavailable. Try again later."]);
+      setShow(true);
+    }
+    setRewriting(false);
+  }
+
   return (
     <div className={cn("space-y-2", className)}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={handleGetSuggestions}
-        disabled={loading || (!title && !description)}
-        className="text-brand-orange hover:text-orange-400"
-      >
-        {loading ? (
-          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Analyzing...</>
-        ) : (
-          <><Sparkles className="w-3.5 h-3.5 mr-1" /> AI Suggestions</>
-        )}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleGetSuggestions}
+          disabled={loading || rewriting || (!title && !description)}
+          className="text-brand-orange hover:text-orange-400"
+        >
+          {loading ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Analyzing...</>
+          ) : (
+            <><Sparkles className="w-3.5 h-3.5 mr-1" /> Tips</>
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleRewrite}
+          disabled={loading || rewriting || (!title && !description)}
+          className="text-brand-orange hover:text-orange-400"
+        >
+          {rewriting ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Rewriting...</>
+          ) : (
+            <><Sparkles className="w-3.5 h-3.5 mr-1" /> Make it Professional</>
+          )}
+        </Button>
+      </div>
 
       {show && (
         <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 space-y-2 relative">
