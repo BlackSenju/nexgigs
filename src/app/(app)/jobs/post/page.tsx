@@ -7,6 +7,7 @@ import { StateSelect } from "@/components/ui/state-select";
 import { CityInput } from "@/components/ui/city-input";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { createJob } from "@/lib/actions/jobs";
+import { AIJobAssist, ContentChecker } from "@/components/ui/ai-assist";
 import {
   ArrowLeft,
   ArrowRight,
@@ -209,6 +210,13 @@ export default function PostJobPage() {
               onChange={(e) => updateForm({ description: e.target.value })}
               rows={5}
               className="w-full px-4 py-2.5 rounded-lg border border-zinc-700 bg-card text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange/50 resize-none"
+            />
+            <ContentChecker content={`${form.title} ${form.description}`} />
+            <AIJobAssist
+              title={form.title}
+              description={form.description}
+              category={form.category}
+              onApplySuggestion={(text) => updateForm({ description: text })}
             />
           </div>
           <div>
