@@ -28,6 +28,8 @@ import {
   adminDeleteJob,
   adminSuspendUser,
   adminUnsuspendUser,
+  adminToggleAdmin,
+  adminSetTier,
 } from "@/lib/actions/admin";
 
 const TABS = ["Overview", "Users", "Jobs", "Ghost Reports", "Audit Log"];
@@ -134,68 +136,10 @@ export default function AdminPage() {
 
       {/* Users */}
       {tab === "Users" && (
-        <div className="space-y-2">
-          {users.map((u) => (
-            <div key={u.id as string} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-zinc-800">
-              <Avatar
-                src={u.avatar_url as string}
-                firstName={u.first_name as string}
-                lastInitial={u.last_initial as string}
-                size="md"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-white">
-                    {u.first_name as string} {u.last_initial as string}.
-                  </span>
-                  {Boolean(u.is_admin) && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-orange/10 text-brand-orange">Admin</span>
-                  )}
-                  {Boolean(u.identity_verified) && (
-                    <Shield className="w-3 h-3 text-green-400" />
-                  )}
-                  {u.verification_tier === "suspended" && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-red/10 text-brand-red">Suspended</span>
-                  )}
-                </div>
-                <div className="text-xs text-zinc-500">
-                  {u.city as string}, {u.state as string} &middot;{" "}
-                  {u.is_gigger ? "Gigger" : ""}{u.is_gigger && u.is_poster ? " + " : ""}{u.is_poster ? "Poster" : ""} &middot;{" "}
-                  {new Date(u.created_at as string).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <Link href={`/profile/${u.id}`}>
-                  <Button variant="ghost" size="sm"><Eye className="w-3.5 h-3.5" /></Button>
-                </Link>
-                {u.verification_tier === "suspended" ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await adminUnsuspendUser(u.id as string);
-                      setUsers(users.map((x) => x.id === u.id ? { ...x, verification_tier: "basic" } : x));
-                    }}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await adminSuspendUser(u.id as string);
-                      setUsers(users.map((x) => x.id === u.id ? { ...x, verification_tier: "suspended" } : x));
-                    }}
-                  >
-                    <Ban className="w-3.5 h-3.5 text-brand-red" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-          {users.length === 0 && <EmptyMsg text="No users yet." />}
-        </div>
+        <UserManagement
+          users={users}
+          setUsers={setUsers}
+        />
       )}
 
       {/* Jobs */}
@@ -334,4 +278,185 @@ function StatCard({
 
 function EmptyMsg({ text }: { text: string }) {
   return <p className="py-8 text-center text-sm text-zinc-500">{text}</p>;
+}
+
+const ALL_TIERS = [
+  { value: "free", label: "Free", color: "text-zinc-400" },
+  { value: "pro", label: "Pro Gigger", color: "text-blue-400" },
+  { value: "elite", label: "Elite Gigger", color: "text-purple-400" },
+  { value: "business_starter", label: "Biz Starter", color: "text-green-400" },
+  { value: "business_growth", label: "Biz Growth", color: "text-emerald-400" },
+  { value: "enterprise", label: "Enterprise", color: "text-yellow-400" },
+];
+
+function UserManagement({
+  users,
+  setUsers,
+}: {
+  users: Array<Record<string, unknown>>;
+  setUsers: (u: Array<Record<string, unknown>>) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [tierLoading, setTierLoading] = useState<string | null>(null);
+  const [userTiers, setUserTiers] = useState<Record<string, string>>({});
+
+  const filtered = search
+    ? users.filter((u) => {
+        const name = `${u.first_name} ${u.last_initial}`.toLowerCase();
+        const city = (u.city as string || "").toLowerCase();
+        return name.includes(search.toLowerCase()) || city.includes(search.toLowerCase());
+      })
+    : users;
+
+  async function handleSetTier(userId: string, tier: string) {
+    setTierLoading(userId);
+    const result = await adminSetTier(userId, tier);
+    if (!result.error) {
+      setUserTiers({ ...userTiers, [userId]: tier });
+    }
+    setTierLoading(null);
+  }
+
+  async function handleToggleAdmin(userId: string, currentlyAdmin: boolean) {
+    const result = await adminToggleAdmin(userId, !currentlyAdmin);
+    if (!result.error) {
+      setUsers(users.map((u) => u.id === userId ? { ...u, is_admin: !currentlyAdmin } : u));
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search users by name or city..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full px-4 py-2 rounded-xl bg-card border border-zinc-800 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange/50"
+      />
+
+      <p className="text-xs text-zinc-500">{filtered.length} users{search ? ` matching "${search}"` : ""}</p>
+
+      {filtered.map((u) => {
+        const isExpanded = expandedUser === (u.id as string);
+        const currentTier = userTiers[u.id as string] ?? "free";
+
+        return (
+          <div key={u.id as string} className="rounded-xl bg-card border border-zinc-800 overflow-hidden">
+            {/* User Row */}
+            <div
+              className="flex items-center gap-3 p-3 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+              onClick={() => setExpandedUser(isExpanded ? null : (u.id as string))}
+            >
+              <Avatar
+                src={u.avatar_url as string}
+                firstName={u.first_name as string}
+                lastInitial={u.last_initial as string}
+                size="md"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-white">
+                    {u.first_name as string} {u.last_initial as string}.
+                  </span>
+                  {Boolean(u.is_admin) && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-orange/10 text-brand-orange font-bold">ADMIN</span>
+                  )}
+                  {Boolean(u.identity_verified) && (
+                    <Shield className="w-3 h-3 text-green-400" />
+                  )}
+                  {u.verification_tier === "suspended" && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-red/10 text-brand-red">SUSPENDED</span>
+                  )}
+                  {currentTier !== "free" && (
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 font-medium", ALL_TIERS.find((t) => t.value === currentTier)?.color ?? "text-zinc-400")}>
+                      {ALL_TIERS.find((t) => t.value === currentTier)?.label ?? currentTier}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-zinc-500">
+                  {u.city as string}, {u.state as string} &middot;{" "}
+                  {u.is_gigger ? "Gigger" : ""}{u.is_gigger && u.is_poster ? " + " : ""}{u.is_poster ? "Poster" : ""} &middot;{" "}
+                  {new Date(u.created_at as string).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <Link href={`/profile/${u.id}`} onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="sm"><Eye className="w-3.5 h-3.5" /></Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Expanded Controls */}
+            {isExpanded && (
+              <div className="px-3 pb-3 pt-1 border-t border-zinc-800 space-y-3">
+                {/* Tier Control */}
+                <div>
+                  <label className="block text-[10px] text-zinc-500 font-medium mb-1.5 uppercase tracking-wider">Subscription Tier</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALL_TIERS.map((tier) => (
+                      <button
+                        key={tier.value}
+                        onClick={() => handleSetTier(u.id as string, tier.value)}
+                        disabled={tierLoading === (u.id as string)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
+                          currentTier === tier.value
+                            ? "border-brand-orange bg-brand-orange/10 text-white"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+                        )}
+                      >
+                        {tierLoading === (u.id as string) ? "..." : tier.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Admin & Suspend Controls */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn("text-xs", Boolean(u.is_admin) ? "border-brand-orange text-brand-orange" : "")}
+                    onClick={() => handleToggleAdmin(u.id as string, Boolean(u.is_admin))}
+                  >
+                    <Shield className="w-3 h-3 mr-1" />
+                    {Boolean(u.is_admin) ? "Remove Admin" : "Make Admin"}
+                  </Button>
+
+                  {u.verification_tier === "suspended" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-green-400 border-green-700"
+                      onClick={async () => {
+                        await adminUnsuspendUser(u.id as string);
+                        setUsers(users.map((x) => x.id === u.id ? { ...x, verification_tier: "basic" } : x));
+                      }}
+                    >
+                      <CheckCircle className="w-3 h-3 mr-1" /> Unsuspend
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-brand-red border-red-900"
+                      onClick={async () => {
+                        await adminSuspendUser(u.id as string);
+                        setUsers(users.map((x) => x.id === u.id ? { ...x, verification_tier: "suspended" } : x));
+                      }}
+                    >
+                      <Ban className="w-3 h-3 mr-1" /> Suspend
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {filtered.length === 0 && <EmptyMsg text="No users found." />}
+    </div>
+  );
 }

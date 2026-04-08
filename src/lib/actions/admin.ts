@@ -179,3 +179,75 @@ export async function adminUnsuspendUser(userId: string) {
 
   return error ? { error: error.message } : { success: true };
 }
+
+/**
+ * Admin: toggle admin status for a user.
+ */
+export async function adminToggleAdmin(userId: string, makeAdmin: boolean) {
+  const admin = await isAdmin();
+  if (!admin) return { error: "Not authorized" };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("nexgigs_profiles")
+    .update({ is_admin: makeAdmin })
+    .eq("id", userId);
+
+  return error ? { error: error.message } : { success: true };
+}
+
+/**
+ * Admin: set a user's subscription tier (bypasses Stripe).
+ * Used for testing, family, and admin accounts.
+ */
+export async function adminSetTier(userId: string, tier: string) {
+  const admin = await isAdmin();
+  if (!admin) return { error: "Not authorized" };
+
+  const supabase = createClient();
+
+  // Deactivate any existing active subscription
+  await supabase
+    .from("nexgigs_subscriptions")
+    .update({ status: "cancelled" })
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (tier === "free") {
+    return { success: true };
+  }
+
+  // Insert a new admin-granted subscription
+  const { error } = await supabase
+    .from("nexgigs_subscriptions")
+    .insert({
+      user_id: userId,
+      tier,
+      status: "active",
+      stripe_subscription_id: `admin_granted_${Date.now()}`,
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+    });
+
+  return error ? { error: error.message } : { success: true };
+}
+
+/**
+ * Admin: get subscription info for a user.
+ */
+export async function adminGetUserTier(userId: string) {
+  const admin = await isAdmin();
+  if (!admin) return { tier: "free" };
+
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("nexgigs_subscriptions")
+    .select("tier, status, current_period_end")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  return { tier: data?.tier ?? "free", expiresAt: data?.current_period_end };
+}
