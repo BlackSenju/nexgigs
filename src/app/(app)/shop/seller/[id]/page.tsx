@@ -7,11 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { BackButton } from "@/components/ui/back-button";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   ShoppingBag, MapPin, MessageSquare, Share2,
-  Link2, ExternalLink, Loader2,
-  FileText, Package, BookOpen, Calendar, Repeat,
+  Link2, Loader2,
 } from "lucide-react";
 
 type SellerProfile = {
