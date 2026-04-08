@@ -175,6 +175,38 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* Join the Team — Coming Soon */}
+      <section className="py-20 px-4 border-t border-zinc-800">
+        <div className="mx-auto max-w-4xl">
+          <div className="text-center mb-10">
+            <span className="text-xs font-medium text-brand-orange bg-brand-orange/10 px-3 py-1 rounded-full">Coming Soon</span>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white">
+              Join the TECHHIVE Team
+            </h2>
+            <p className="mt-3 text-zinc-400 max-w-xl mx-auto">
+              We&apos;re building the future of local work. If you&apos;re passionate about community and want to help people earn, we want to hear from you.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "Content Creator", desc: "Create TikToks, Reels, and ads that tell the NexGigs story. Milwaukee-based preferred." },
+              { title: "Software Engineer", desc: "Full-stack Next.js + Supabase. Help us build the platform that empowers gig workers." },
+              { title: "Community Manager", desc: "Grow our Milwaukee community. Onboard new giggers and businesses. Be the face of NexGigs." },
+              { title: "Marketing Lead", desc: "Digital marketing, SEO, partnerships. Help us reach every neighborhood in Milwaukee." },
+            ].map((role) => (
+              <div key={role.title} className="p-4 rounded-xl border border-zinc-800 bg-card">
+                <h3 className="text-sm font-bold text-white">{role.title}</h3>
+                <p className="mt-1 text-xs text-zinc-400 leading-relaxed">{role.desc}</p>
+                <span className="mt-3 inline-block text-[10px] text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded">Opening soon</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-zinc-500">
+            Interested? Email <span className="text-brand-orange">careers@nexgigs.com</span> with your portfolio or resume.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 px-4 border-t border-zinc-800">
         <div className="mx-auto max-w-2xl text-center">
