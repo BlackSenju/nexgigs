@@ -53,11 +53,10 @@ const PRICING_TIERS = [
     tier: "business_starter",
     features: [
       "Company profile page",
-      "10 job posts/month",
-      "Applicant management",
-      "Team hiring (up to 5)",
+      "Unlimited job posting",
+      "AI-powered job descriptions",
+      "Full gigger messaging",
       "7% service fee",
-      "Business badge",
     ],
   },
   {
@@ -67,12 +66,10 @@ const PRICING_TIERS = [
     popular: true,
     features: [
       "Everything in Starter",
-      "Unlimited job posts",
-      "Talent pool access",
-      "Invoice generation",
-      "5% service fee",
-      "Priority support",
-      "Analytics dashboard",
+      "5% service fee (save 29%)",
+      "Unlimited AI features",
+      "Talent pool (coming soon)",
+      "Analytics dashboard (coming soon)",
     ],
   },
   {
@@ -81,12 +78,10 @@ const PRICING_TIERS = [
     tier: "enterprise",
     features: [
       "Everything in Growth",
-      "Dedicated account manager",
-      "ATS webhook integration",
-      "3% service fee",
-      "Private talent pool",
-      "Custom branding",
-      "Bulk hiring tools",
+      "3% service fee (save 57%)",
+      "Dedicated support (coming soon)",
+      "ATS integration (coming soon)",
+      "Custom branding (coming soon)",
     ],
   },
 ];

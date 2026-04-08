@@ -141,16 +141,6 @@ export async function createJob(input: {
     .eq("id", user.id)
     .single();
 
-  // Check job posting limit (Business Starter = 10/month)
-  const { data: canPost } = await supabase.rpc("can_user_post_job", {
-    user_id_input: user.id,
-  });
-  if (canPost === false) {
-    return {
-      error: "You have reached your monthly job posting limit (10 jobs). Upgrade to Business Growth for unlimited postings.",
-    };
-  }
-
   // Content moderation — check for prohibited content
   const modResult = moderateJobPosting({
     title: input.title,
