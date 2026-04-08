@@ -40,9 +40,9 @@ export const SUBSCRIPTION_TIERS = {
     stripeProductId: "prod_UIOPOUAkwOFd7j",
     posterFee: 0.07,
     features: [
-      "10 job posts per month",
-      "Applicant management",
-      "Team hiring (up to 5)",
+      "Company profile page",
+      "Unlimited job posting",
+      "AI-powered job descriptions",
       "7% service fee",
     ],
   },

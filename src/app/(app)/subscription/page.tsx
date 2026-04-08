@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 
+// Features marked with ⚡ are coming soon
 const GIGGER_TIERS = [
   {
     key: "free",
@@ -26,11 +27,13 @@ const GIGGER_TIERS = [
     price: 0,
     icon: Zap,
     features: [
-      "Unlimited job applications",
-      "8 portfolio photos",
-      "Standard placement",
-      "3% commission on earnings",
-      "10 shop listings",
+      { text: "Unlimited job applications", built: true },
+      { text: "Unlimited job posting", built: true },
+      { text: "Portfolio uploads", built: true },
+      { text: "Full messaging", built: true },
+      { text: "3% commission on earnings", built: true },
+      { text: "Shop listings", built: true },
+      { text: "3 AI assists per day", built: true },
     ],
   },
   {
@@ -40,11 +43,13 @@ const GIGGER_TIERS = [
     icon: Crown,
     popular: true,
     features: [
-      "Priority placement in search",
-      "Instant job alerts",
-      "Unlimited portfolio",
-      "2% commission (save 33%)",
-      "1 boost per month",
+      { text: "Everything in Free", built: true },
+      { text: "2% commission (save 33%)", built: true },
+      { text: "10 AI assists per day", built: true },
+      { text: "Unlimited AI rewrites", built: true },
+      { text: "Pro badge on profile", built: false },
+      { text: "Priority search placement", built: false },
+      { text: "Instant job alerts", built: false },
     ],
   },
   {
@@ -53,12 +58,13 @@ const GIGGER_TIERS = [
     price: 14.99,
     icon: Rocket,
     features: [
-      "Top placement in all searches",
-      "0% commission (keep everything)",
-      "Elite badge on profile",
-      "3 boosts per month",
-      "Shop Pro features free",
-      "Priority customer support",
+      { text: "Everything in Pro", built: true },
+      { text: "0% commission (keep everything)", built: true },
+      { text: "Unlimited AI features", built: true },
+      { text: "Elite badge on profile", built: false },
+      { text: "Top search placement", built: false },
+      { text: "AI job matching (weekly picks)", built: false },
+      { text: "Priority customer support", built: false },
     ],
   },
 ];
@@ -70,12 +76,13 @@ const BUSINESS_TIERS = [
     price: 29.99,
     icon: Building2,
     features: [
-      "Company profile page",
-      "10 job posts per month",
-      "Applicant management dashboard",
-      "Team hiring (up to 5 members)",
-      "7% service fee on hires",
-      "Business badge on listings",
+      { text: "Company profile page", built: true },
+      { text: "Unlimited job posting", built: true },
+      { text: "Full messaging with giggers", built: true },
+      { text: "7% service fee on hires", built: true },
+      { text: "AI-powered job descriptions", built: true },
+      { text: "Business badge on listings", built: false },
+      { text: "Applicant management dashboard", built: false },
     ],
   },
   {
@@ -85,13 +92,13 @@ const BUSINESS_TIERS = [
     icon: TrendingUp,
     popular: true,
     features: [
-      "Everything in Starter",
-      "Unlimited job posts",
-      "Talent pool (save favorite giggers)",
-      "Invoice generation",
-      "5% service fee",
-      "Priority support",
-      "Analytics dashboard",
+      { text: "Everything in Starter", built: true },
+      { text: "5% service fee (save 29%)", built: true },
+      { text: "Unlimited AI features", built: true },
+      { text: "Talent pool (save giggers)", built: false },
+      { text: "Invoice generation", built: false },
+      { text: "Analytics dashboard", built: false },
+      { text: "Priority support", built: false },
     ],
   },
   {
@@ -100,13 +107,13 @@ const BUSINESS_TIERS = [
     price: 199.99,
     icon: Gem,
     features: [
-      "Everything in Growth",
-      "Dedicated account manager",
-      "ATS webhook integration",
-      "3% service fee",
-      "Private talent pool",
-      "Custom branding",
-      "Bulk hiring tools",
+      { text: "Everything in Growth", built: true },
+      { text: "3% service fee (save 57%)", built: true },
+      { text: "Dedicated account manager", built: false },
+      { text: "ATS webhook integration", built: false },
+      { text: "Private talent pool", built: false },
+      { text: "Custom branding", built: false },
+      { text: "Bulk hiring tools", built: false },
     ],
   },
 ];
@@ -249,9 +256,10 @@ function SubscriptionPageInner() {
               </div>
               <div className="mt-3 space-y-1.5">
                 {tier.features.map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-sm text-zinc-300">
-                    <CheckCircle className="w-3.5 h-3.5 text-brand-orange flex-shrink-0" />
-                    {f}
+                  <div key={f.text} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className={cn("w-3.5 h-3.5 flex-shrink-0", f.built ? "text-brand-orange" : "text-zinc-600")} />
+                    <span className={f.built ? "text-zinc-300" : "text-zinc-500"}>{f.text}</span>
+                    {!f.built && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-500 font-medium">Soon</span>}
                   </div>
                 ))}
               </div>
