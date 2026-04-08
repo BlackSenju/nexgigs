@@ -57,20 +57,22 @@ export function Navbar() {
             </span>
           </Link>
 
-          <div className="hidden sm:flex items-center gap-6">
-            <Link
-              href="/jobs"
-              className="text-sm text-zinc-400 hover:text-white transition-colors"
-            >
-              Browse Jobs
-            </Link>
-            <Link
-              href="/jobs/post"
-              className="text-sm text-zinc-400 hover:text-white transition-colors"
-            >
-              Post a Job
-            </Link>
-          </div>
+          {user && (
+            <div className="hidden sm:flex items-center gap-6">
+              <Link
+                href="/jobs"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Browse Jobs
+              </Link>
+              <Link
+                href="/jobs/post"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Post a Job
+              </Link>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             {user ? (
