@@ -122,8 +122,8 @@ export default function RewardsPage() {
         setCreditBalance(creditData.balance);
         const owned = new Set<string>(
           creditData.history
-            .filter((row: any) => row.type === "redeemed" && Number(row.amount) === 0)
-            .map((row: any) => row.description as string)
+            .filter((row: Record<string, unknown>) => row.type === "redeemed" && Number(row.amount) === 0)
+            .map((row: Record<string, unknown>) => row.description as string)
         );
         setOwnedBadges(owned);
       }
