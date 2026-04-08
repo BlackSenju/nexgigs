@@ -206,6 +206,17 @@ export async function adminSetTier(userId: string, tier: string) {
 
   const supabase = createClient();
 
+  // First check if the subscriptions table exists by trying a select
+  const { error: tableCheck } = await supabase
+    .from("nexgigs_subscriptions")
+    .select("id")
+    .limit(1);
+
+  if (tableCheck) {
+    // Table might not exist — create it inline
+    return { error: `Subscriptions table issue: ${tableCheck.message}. You may need to create the nexgigs_subscriptions table in Supabase.` };
+  }
+
   // Deactivate any existing active subscription
   await supabase
     .from("nexgigs_subscriptions")
@@ -214,22 +225,27 @@ export async function adminSetTier(userId: string, tier: string) {
     .eq("status", "active");
 
   if (tier === "free") {
-    return { success: true };
+    return { success: true, tier: "free" };
   }
 
-  // Insert a new admin-granted subscription
-  const { error } = await supabase
+  // Upsert admin-granted subscription (matches webhook pattern)
+  const { data, error } = await supabase
     .from("nexgigs_subscriptions")
-    .insert({
+    .upsert({
       user_id: userId,
       tier,
       status: "active",
       stripe_subscription_id: `admin_granted_${Date.now()}`,
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
-    });
+      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    }, { onConflict: "user_id" })
+    .select()
+    .single();
 
-  return error ? { error: error.message } : { success: true };
+  if (error) {
+    return { error: `Failed to set tier: ${error.message} (code: ${error.code})` };
+  }
+
+  return { success: true, tier: data?.tier ?? tier };
 }
 
 /**

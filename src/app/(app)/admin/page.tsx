@@ -300,6 +300,29 @@ function UserManagement({
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [tierLoading, setTierLoading] = useState<string | null>(null);
   const [userTiers, setUserTiers] = useState<Record<string, string>>({});
+  const [tierError, setTierError] = useState<string | null>(null);
+  const [tiersLoaded, setTiersLoaded] = useState(false);
+
+  // Load current tiers for all users on mount
+  useEffect(() => {
+    async function loadTiers() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("user_id, tier")
+        .eq("status", "active");
+
+      if (data) {
+        const tierMap: Record<string, string> = {};
+        for (const sub of data) {
+          tierMap[sub.user_id] = sub.tier;
+        }
+        setUserTiers(tierMap);
+      }
+      setTiersLoaded(true);
+    }
+    loadTiers();
+  }, []);
 
   const filtered = search
     ? users.filter((u) => {
@@ -311,8 +334,11 @@ function UserManagement({
 
   async function handleSetTier(userId: string, tier: string) {
     setTierLoading(userId);
+    setTierError(null);
     const result = await adminSetTier(userId, tier);
-    if (!result.error) {
+    if (result.error) {
+      setTierError(result.error);
+    } else {
       setUserTiers({ ...userTiers, [userId]: tier });
     }
     setTierLoading(null);
@@ -336,7 +362,16 @@ function UserManagement({
         className="w-full px-4 py-2 rounded-xl bg-card border border-zinc-800 text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange/50"
       />
 
-      <p className="text-xs text-zinc-500">{filtered.length} users{search ? ` matching "${search}"` : ""}</p>
+      <p className="text-xs text-zinc-500">
+        {filtered.length} users{search ? ` matching "${search}"` : ""}
+        {!tiersLoaded && " · Loading tiers..."}
+      </p>
+
+      {tierError && (
+        <div className="p-2 rounded-lg bg-brand-red/10 border border-brand-red/30 text-xs text-red-300">
+          {tierError}
+        </div>
+      )}
 
       {filtered.map((u) => {
         const isExpanded = expandedUser === (u.id as string);
