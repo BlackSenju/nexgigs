@@ -3,7 +3,7 @@
   "name": "NexGigs",
   "short_name": "NexGigs",
   "description": "Your city. Your skill. Your money.",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone"],
