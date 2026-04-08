@@ -181,7 +181,7 @@ export default async function LandingPage() {
           <div className="text-center mb-10">
             <span className="text-xs font-medium text-brand-orange bg-brand-orange/10 px-3 py-1 rounded-full">Coming Soon</span>
             <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white">
-              Join the TECHHIVE Team
+              Join the NexGigs Team
             </h2>
             <p className="mt-3 text-zinc-400 max-w-xl mx-auto">
               We&apos;re building the future of local work. If you&apos;re passionate about community and want to help people earn, we want to hear from you.
@@ -244,7 +244,7 @@ export default async function LandingPage() {
             </Link>
           </div>
           <p className="text-xs text-zinc-600 mt-4 max-w-xl mx-auto text-center leading-relaxed sm:text-left">
-            NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk. All payments processed securely through Stripe. Operated by TECHHIVE, Milwaukee, WI.
+            NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk. All payments processed securely through Stripe. Operated by NexGigs, Milwaukee, WI.
           </p>
         </div>
       </footer>

@@ -73,7 +73,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-bold text-white mt-6">14. Contact</h2>
         <p>For questions about these terms, contact us at <strong className="text-brand-orange">dev@nexgigs.com</strong>.</p>
 
-        <p className="text-zinc-500 mt-8 pt-4 border-t border-zinc-800">NexGigs is operated by TECHHIVE. Milwaukee, WI.</p>
+        <p className="text-zinc-500 mt-8 pt-4 border-t border-zinc-800">NexGigs. Milwaukee, WI.</p>
       </div>
     </div>
   );

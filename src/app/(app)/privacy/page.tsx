@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
         <h2 className="text-lg font-bold text-white mt-6">10. Contact Us</h2>
         <p>For privacy-related questions, contact us at privacy@nexgigs.com.</p>
 
-        <p className="text-zinc-500 mt-8 pt-4 border-t border-zinc-800">NexGigs is operated by TECHHIVE. NexGigs is a marketplace platform that connects people seeking services with independent service providers.</p>
+        <p className="text-zinc-500 mt-8 pt-4 border-t border-zinc-800">NexGigs is a marketplace platform that connects people seeking services with independent service providers.</p>
       </div>
     </div>
   );
