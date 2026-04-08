@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { improveJobDescription, professionalRewrite } from "@/lib/ai";
+import { improveJobDescription, professionalRewrite, suggestPricing } from "@/lib/ai";
 import { moderateContent } from "@/lib/moderation";
 import { checkAIUsage, recordAIUsage } from "@/lib/actions/ai-usage";
 
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     job_description: "tips",
     rewrite: "rewrite",
     matching: "matching",
+    pricing: "tips",
   };
   const feature = featureMap[type];
 
@@ -102,6 +103,24 @@ export async function POST(request: NextRequest) {
         });
       } catch {
         return NextResponse.json({ error: "AI rewrite unavailable. Try again later." }, { status: 500 });
+      }
+    }
+
+    if (type === "pricing") {
+      try {
+        const result = await suggestPricing({
+          title: title || "",
+          description: description || "",
+          category: category || "",
+          listingType: body.listingType || "service",
+          sessionDuration: body.sessionDuration,
+          sessionFormat: body.sessionFormat,
+          recurringInterval: body.recurringInterval,
+        });
+        await recordAIUsage("tips");
+        return NextResponse.json(result);
+      } catch {
+        return NextResponse.json({ error: "Pricing AI unavailable. Try again later." }, { status: 500 });
       }
     }
 
