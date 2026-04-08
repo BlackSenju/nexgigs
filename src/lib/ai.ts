@@ -15,11 +15,11 @@ function getClient(): Anthropic {
  * Run a quick AI task using Haiku (cheapest, fastest model).
  * Used for moderation, matching, suggestions — not deep reasoning.
  */
-async function quickAI(systemPrompt: string, userPrompt: string): Promise<string> {
+async function quickAI(systemPrompt: string, userPrompt: string, maxTokens = 1000): Promise<string> {
   const client = getClient();
   const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
+    model: "claude-sonnet-4-20250514",
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -70,21 +70,30 @@ export async function improveJobDescription(input: {
   improvedDescription?: string;
 }> {
   const result = await quickAI(
-    `You are a job posting assistant for NexGigs, a gig economy marketplace. Help posters write better job descriptions that attract more applicants. Return JSON only with this format: {"suggestions": ["tip1", "tip2"], "improvedDescription": "better version if needed"}`,
+    `You are a job posting consultant for NexGigs marketplace. Analyze the listing and provide actionable tips. Return ONLY valid JSON — no markdown, no backticks. Format: {"suggestions": ["tip1", "tip2", "tip3"], "improvedDescription": "better version or null"}`,
     `Category: ${input.category}
 Title: ${input.title}
 Description: ${input.description}
 ${input.price ? `Budget: $${input.price}` : "No budget set"}
 
-Analyze this job posting and return JSON with:
-1. "suggestions" — 2-4 quick tips to improve the listing
-2. "improvedDescription" — only if the description is unclear or too short, otherwise null`
+Give 3-4 specific, actionable tips to improve this listing. If the description could be better, provide an improved version.`
   );
 
   try {
-    return JSON.parse(result);
+    let cleaned = result.trim();
+    if (cleaned.startsWith("\`\`\`")) {
+      cleaned = cleaned.replace(/^\`\`\`(?:json)?\n?/, "").replace(/\n?\`\`\`$/, "");
+    }
+    return JSON.parse(cleaned);
   } catch {
-    return { suggestions: [] };
+    return {
+      suggestions: [
+        "Add more details about what exactly needs to be done",
+        "Include your timeline or deadline",
+        "Mention if you provide tools/materials or the gigger needs their own",
+        input.price ? "Your budget is set — great! This attracts more applicants." : "Consider adding a budget — jobs with budgets get 3x more applicants",
+      ],
+    };
   }
 }
 
@@ -166,32 +175,58 @@ export async function professionalRewrite(input: {
   rewrittenDescription: string;
 }> {
   const result = await quickAI(
-    `You are a professional copywriter for NexGigs, a gig economy marketplace. Rewrite the user's listing to sound professional, clear, and trustworthy while keeping ALL original details and meaning. Do NOT add information that was not in the original. Make it concise but complete. Return JSON only: {"rewrittenTitle": "...", "rewrittenDescription": "..."}
+    `You are an expert copywriter. Your ONLY job is to rewrite listings for a gig economy marketplace called NexGigs. You MUST significantly improve the text — never return the same text the user gave you.
 
-Rules:
-- Keep the same meaning and all details
-- Make it sound professional but approachable (not corporate)
-- Fix grammar and spelling
-- Organize into clear paragraphs if needed
-- Add bullet points for requirements if applicable
-- Keep it natural — this is a community marketplace, not a corporate job board
-- If the original is already good, just clean it up slightly`,
-    `Type: ${input.type} listing
-Category: ${input.category}
+CRITICAL RULES:
+1. You MUST return ONLY a valid JSON object. No markdown, no backticks, no explanation.
+2. The JSON format is: {"rewrittenTitle": "improved title here", "rewrittenDescription": "improved description here"}
+3. ALWAYS make the title catchier and more specific
+4. ALWAYS expand and improve the description — add structure, clarity, and professionalism
+5. Use bullet points with • for requirements or details
+6. Fix ALL grammar, spelling, and punctuation
+7. Make it sound professional but friendly and approachable
+8. Keep the original meaning but make it MUCH better
+9. If the description is short, expand it with helpful context
+10. NEVER return the original text unchanged`,
+    `This is a ${input.type} listing in the "${input.category}" category.
 ${input.price ? `Budget: $${input.price}` : ""}
 
-Original title: ${input.title}
-Original description: ${input.description}
+ORIGINAL TITLE: ${input.title}
 
-Rewrite this to be professional and clear.`
+ORIGINAL DESCRIPTION: ${input.description}
+
+Now rewrite BOTH the title and description to be significantly better, more professional, and clearer. Return ONLY the JSON object.`,
+    1500
   );
 
   try {
-    return JSON.parse(result);
+    // Try to extract JSON from the response (handle markdown wrapping)
+    let cleaned = result.trim();
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    const parsed = JSON.parse(cleaned);
+    // Verify we actually got different text back
+    if (parsed.rewrittenDescription === input.description) {
+      // AI returned the same text — force improvement
+      return {
+        rewrittenTitle: parsed.rewrittenTitle || input.title,
+        rewrittenDescription: input.description + "\n\n(AI was unable to improve this description. Try adding more details about what you need done, your timeline, and any specific requirements.)",
+      };
+    }
+    return parsed;
   } catch {
+    // JSON parsing failed — try to extract useful text anyway
+    const titleMatch = result.match(/"rewrittenTitle"\s*:\s*"([^"]+)"/);
+    const descMatch = result.match(/"rewrittenDescription"\s*:\s*"([^"]+)"/);
+    if (titleMatch && descMatch) {
+      return { rewrittenTitle: titleMatch[1], rewrittenDescription: descMatch[1] };
+    }
+    // Complete fallback — return a helpful message
     return {
       rewrittenTitle: input.title,
-      rewrittenDescription: input.description,
+      rewrittenDescription: "AI rewrite failed. Please try again or manually improve your description by adding:\n• What exactly needs to be done\n• Your timeline or deadline\n• Any tools or materials needed\n• Your budget or pay range",
     };
   }
 }
