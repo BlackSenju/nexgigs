@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, PlusCircle, MessageSquare, User } from "lucide-react";
+import { Search, PlusCircle, MessageSquare, User, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/jobs", label: "Jobs", icon: Search },
+  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/jobs/post", label: "Post", icon: PlusCircle },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/messages", label: "Chat", icon: MessageSquare },
   { href: "/profile/me", label: "Profile", icon: User },
 ];
 
@@ -22,8 +23,11 @@ export function MobileNav() {
     if (item.href === "/jobs/post") {
       return pathname === "/jobs/post";
     }
+    if (item.href === "/shop") {
+      return pathname.startsWith("/shop");
+    }
     if (item.href === "/profile/me") {
-      return pathname.startsWith("/profile/me") || pathname.startsWith("/settings") || pathname.startsWith("/rewards") || pathname.startsWith("/earnings");
+      return pathname.startsWith("/profile") || pathname.startsWith("/settings") || pathname.startsWith("/rewards") || pathname.startsWith("/earnings");
     }
     return pathname.startsWith(item.href);
   }

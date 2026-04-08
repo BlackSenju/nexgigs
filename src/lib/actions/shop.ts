@@ -39,6 +39,8 @@ export async function createShopListing(input: {
   // Policy
   refundPolicy?: string;
   customRefundText?: string;
+  // Images
+  imageUrls?: string[];
 }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -88,6 +90,8 @@ export async function createShopListing(input: {
       availability: input.availability ?? {},
       refund_policy: input.refundPolicy ?? "no_refunds",
       custom_refund_text: input.customRefundText,
+      image_url: input.imageUrls?.[0] ?? null,
+      image_urls: input.imageUrls ?? [],
     })
     .select()
     .single();
