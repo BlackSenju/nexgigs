@@ -128,6 +128,9 @@ export default function SellPage() {
     shippingType: "none",
     shippingPrice: "",
     meetupEnabled: false,
+    sizes: "" as string, // comma-separated: "S,M,L,XL"
+    colors: "" as string, // comma-separated: "Black,White,Red"
+    customOptions: "" as string, // comma-separated custom variants
     sessionDuration: "",
     sessionFormat: "both",
     groupMaxSize: "",
@@ -422,6 +425,52 @@ export default function SellPage() {
               {(form.shippingType === "shipping" || form.shippingType === "both") && (
                 <Input label="Shipping Cost ($)" value={form.shippingPrice} onChange={(e) => updateForm({ shippingPrice: e.target.value })} placeholder="5.00" />
               )}
+
+              {/* Sizes */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Available Sizes (optional)</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["XS", "S", "M", "L", "XL", "2XL", "3XL", "One Size"].map((size) => {
+                    const selected = form.sizes.split(",").filter(Boolean).includes(size);
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => {
+                          const current = form.sizes.split(",").filter(Boolean);
+                          const updated = selected
+                            ? current.filter((s) => s !== size)
+                            : [...current, size];
+                          updateForm({ sizes: updated.join(",") });
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors",
+                          selected
+                            ? "border-brand-orange bg-brand-orange/10 text-white"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Colors */}
+              <Input
+                label="Available Colors (optional)"
+                value={form.colors}
+                onChange={(e) => updateForm({ colors: e.target.value })}
+                placeholder="e.g. Black, White, Red, Navy"
+              />
+
+              {/* Custom variants */}
+              <Input
+                label="Other Options (optional)"
+                value={form.customOptions}
+                onChange={(e) => updateForm({ customOptions: e.target.value })}
+                placeholder="e.g. Gold, Silver, Rose Gold or 14in, 16in, 18in chain"
+              />
             </div>
           )}
 
@@ -641,31 +690,67 @@ export default function SellPage() {
             </div>
           )}
 
-          {/* Package tiers */}
-          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "digital" || form.listingType === "subscription") && (
-            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
-              <h3 className="text-xs font-bold text-white">Package Tiers (Optional — increases sales by 40%)</h3>
-              <p className="text-[10px] text-zinc-500">
-                {form.listingType === "service" || form.listingType === "subscription"
+          {/* Package tiers / Bundle deals — available for ALL listing types */}
+          <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+            <h3 className="text-xs font-bold text-white">
+              {form.listingType === "product" ? "Bundle Deals (Optional — sell more per order)" : "Package Tiers (Optional — increases sales by 40%)"}
+            </h3>
+            <p className="text-[10px] text-zinc-500">
+              {form.listingType === "product"
+                ? "Example: Single item vs 2-piece set vs Full collection. Bundles increase average order value."
+                : form.listingType === "service" || form.listingType === "subscription"
                   ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up materials"
                   : form.listingType === "experience"
                     ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time after"
                     : "Example: Basic = template only, Standard = template + tutorial video, Premium = full bundle + email support"}
-              </p>
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2">
-                  <Input label="Basic $" value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })} placeholder="25" />
-                  <Input label="Standard $" value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })} placeholder="50" />
-                  <Input label="Premium $" value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })} placeholder="100" />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Input label="Basic includes" value={form.basicDescription} onChange={(e) => updateForm({ basicDescription: e.target.value })} placeholder="What's in Basic?" />
-                  <Input label="Standard includes" value={form.standardDescription} onChange={(e) => updateForm({ standardDescription: e.target.value })} placeholder="What's in Standard?" />
-                  <Input label="Premium includes" value={form.premiumDescription} onChange={(e) => updateForm({ premiumDescription: e.target.value })} placeholder="What's in Premium?" />
-                </div>
+            </p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  label={form.listingType === "product" ? "Single $" : "Basic $"}
+                  value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })}
+                  placeholder={form.listingType === "product" ? "40" : "25"}
+                />
+                <Input
+                  label={form.listingType === "product" ? "2-Piece $" : "Standard $"}
+                  value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })}
+                  placeholder={form.listingType === "product" ? "70" : "50"}
+                />
+                <Input
+                  label={form.listingType === "product" ? "Bundle $" : "Premium $"}
+                  value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })}
+                  placeholder={form.listingType === "product" ? "95" : "100"}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  label={form.listingType === "product" ? "Single item" : "Basic includes"}
+                  value={form.basicDescription} onChange={(e) => updateForm({ basicDescription: e.target.value })}
+                  placeholder={form.listingType === "product" ? "e.g. T-shirt only" : "What's in Basic?"}
+                />
+                <Input
+                  label={form.listingType === "product" ? "2-Piece set" : "Standard includes"}
+                  value={form.standardDescription} onChange={(e) => updateForm({ standardDescription: e.target.value })}
+                  placeholder={form.listingType === "product" ? "e.g. Shirt + hat" : "What's in Standard?"}
+                />
+                <Input
+                  label={form.listingType === "product" ? "Full bundle" : "Premium includes"}
+                  value={form.premiumDescription} onChange={(e) => updateForm({ premiumDescription: e.target.value })}
+                  placeholder={form.listingType === "product" ? "e.g. Shirt + hat + bag" : "What's in Premium?"}
+                />
               </div>
             </div>
-          )}
+            {form.listingType === "product" && (form.priceBasic || form.priceStandard || form.pricePremium) && (
+              <div className="flex items-center gap-1.5 text-[10px] text-green-400">
+                <TrendingUp className="w-3 h-3" />
+                <span>
+                  {form.pricePremium && form.priceBasic
+                    ? `Buyers save $${(Number(form.priceBasic) * 3 - Number(form.pricePremium)).toFixed(0)} on the bundle vs buying separately`
+                    : "Bundle discounts encourage bigger orders"}
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Refund policy */}
           <Combobox options={REFUND_OPTIONS} value={form.refundPolicy} onChange={(val) => updateForm({ refundPolicy: val })} label="Refund Policy" />
@@ -684,6 +769,14 @@ export default function SellPage() {
               )}
               {form.groupMaxSize && <p><span className="text-zinc-500">Max group:</span> <span className="text-white">{form.groupMaxSize}</span></p>}
               {form.listingType === "product" && <p><span className="text-zinc-500">Condition:</span> <span className="text-white capitalize">{form.condition}</span></p>}
+              {form.sizes && <p><span className="text-zinc-500">Sizes:</span> <span className="text-white">{form.sizes}</span></p>}
+              {form.colors && <p><span className="text-zinc-500">Colors:</span> <span className="text-white">{form.colors}</span></p>}
+              {form.customOptions && <p><span className="text-zinc-500">Options:</span> <span className="text-white">{form.customOptions}</span></p>}
+              {(form.priceBasic || form.priceStandard || form.pricePremium) && (
+                <p><span className="text-zinc-500">{form.listingType === "product" ? "Bundles:" : "Packages:"}</span> <span className="text-white">
+                  {[form.priceBasic && `$${form.priceBasic}`, form.priceStandard && `$${form.priceStandard}`, form.pricePremium && `$${form.pricePremium}`].filter(Boolean).join(" / ")}
+                </span></p>
+              )}
               <p><span className="text-zinc-500">Refund:</span> <span className="text-white">{REFUND_OPTIONS.find((r) => r.value === form.refundPolicy)?.label}</span></p>
             </div>
           </div>
