@@ -208,7 +208,7 @@ export default function MyProfilePage() {
       {/* Shop Tab */}
       {activeTab === "Shop" && (
         <div>
-          <Link href="/shop"><button className="w-full mb-3 p-3 rounded-xl border border-dashed border-zinc-700 text-center hover:border-brand-orange/50 transition-colors"><ShoppingBag className="w-5 h-5 text-zinc-500 mx-auto" /><span className="text-xs text-zinc-500 mt-1 block">List something for sale</span></button></Link>
+          <Link href="/shop/sell"><button className="w-full mb-3 p-3 rounded-xl border border-dashed border-zinc-700 text-center hover:border-brand-orange/50 transition-colors"><ShoppingBag className="w-5 h-5 text-zinc-500 mx-auto" /><span className="text-xs text-zinc-500 mt-1 block">List something for sale</span></button></Link>
           {shopItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {shopItems.map((item) => (
