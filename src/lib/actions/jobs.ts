@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { moderateJobPosting } from "@/lib/moderation";
+import { aiModerateContent } from "@/lib/ai";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
@@ -138,6 +140,31 @@ export async function createJob(input: {
     .select("first_name, last_initial")
     .eq("id", user.id)
     .single();
+
+  // Content moderation — check for prohibited content
+  const modResult = moderateJobPosting({
+    title: input.title,
+    description: input.description,
+    price: input.price,
+    category: input.category,
+  });
+
+  if (modResult.blocked) {
+    return { error: modResult.blockReason ?? "This job posting contains prohibited content." };
+  }
+
+  // AI moderation in background (non-blocking, flags for review)
+  aiModerateContent({
+    content: `${input.title} ${input.description}`,
+    contentType: "job",
+  }).then((aiResult) => {
+    if (!aiResult.safe) {
+      notifyDiscord("security_alert", {
+        message: `AI flagged job posting: ${input.title} — Issues: ${aiResult.issues.join(", ")}`,
+        user: user.id,
+      });
+    }
+  }).catch(() => {});
 
   // Geocode the location to get lat/lng
   const geoQuery = `${input.zipCode} ${input.city} ${input.state}`;

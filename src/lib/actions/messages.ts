@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit";
+import { moderateMessage } from "@/lib/moderation";
 
 /**
  * Get all conversations for the current user.
@@ -98,6 +99,10 @@ export async function sendMessage(conversationId: string, content: string) {
   if (!user) return { error: "Not authenticated" };
   if (!content.trim()) return { error: "Message cannot be empty" };
 
+  // Content moderation — check for off-platform attempts
+  const modResult = moderateMessage(content);
+  const warnings = modResult.warnings;
+
   // Verify participant
   const { data: convo } = await supabase
     .from("nexgigs_conversations")
@@ -125,6 +130,9 @@ export async function sendMessage(conversationId: string, content: string) {
 
   if (error) return { error: error.message };
 
+  // Return message with moderation warnings (message still sends, but user sees warning)
+  const messageWithWarnings = { ...message, warnings };
+
   // Update conversation preview and unread count
   const isP1 = convo.participant_1_id === user.id;
   const preview = content.trim().slice(0, 100);
@@ -140,7 +148,7 @@ export async function sendMessage(conversationId: string, content: string) {
     })
     .eq("id", conversationId);
 
-  return { message };
+  return { message: messageWithWarnings };
 }
 
 /**
