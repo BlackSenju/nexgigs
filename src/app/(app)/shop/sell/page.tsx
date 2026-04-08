@@ -16,7 +16,7 @@ import {
   Package, FileText, BookOpen, Calendar, Repeat,
   Clock, Video, MapPin, Users, BookmarkCheck,
   Sparkles, DollarSign, TrendingUp, Lock, Share2, ExternalLink,
-  Camera, X, Image as ImageIcon,
+  Camera, X, Image as ImageIcon, CreditCard, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -122,13 +122,17 @@ export default function SellPage() {
   } | null>(null);
 
   const [userTier, setUserTier] = useState("free");
+  const [stripeStatus, setStripeStatus] = useState<"loading" | "not_connected" | "incomplete" | "active">("loading");
+  const [connectLoading, setConnectLoading] = useState(false);
 
   useEffect(() => {
-    async function loadTier() {
+    async function loadData() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
+
+      // Load tier
       const { data } = await supabase
         .from("nexgigs_subscriptions")
         .select("tier")
@@ -137,8 +141,17 @@ export default function SellPage() {
         .limit(1)
         .single();
       if (data?.tier) setUserTier(data.tier);
+
+      // Check Stripe Connect status
+      try {
+        const res = await fetch("/api/stripe/connect");
+        const connectData = await res.json();
+        setStripeStatus(connectData.status ?? "not_connected");
+      } catch {
+        setStripeStatus("not_connected");
+      }
     }
-    loadTier();
+    loadData();
   }, []);
 
   const isPro = ["pro", "elite", "business_starter", "business_growth", "enterprise"].includes(userTier);
@@ -269,7 +282,50 @@ export default function SellPage() {
     <div className="max-w-lg mx-auto px-4 py-4">
       <BackButton fallbackHref="/profile/me" />
       <h1 className="text-xl font-black text-white mb-1">Sell Something</h1>
-      <p className="text-sm text-zinc-400 mb-6">List a product, service, or experience for sale.</p>
+      <p className="text-sm text-zinc-400 mb-4">List a product, service, or experience for sale.</p>
+
+      {/* Payment setup banner */}
+      {stripeStatus === "loading" ? null : stripeStatus === "active" ? (
+        <div className="mb-4 p-3 rounded-xl bg-green-900/20 border border-green-700/30 flex items-center gap-2">
+          <CreditCard className="w-4 h-4 text-green-400 flex-shrink-0" />
+          <p className="text-xs text-green-300">Payments set up — you&apos;ll get paid directly to your bank or debit card.</p>
+        </div>
+      ) : (
+        <div className="mb-4 p-3 rounded-xl bg-brand-orange/5 border border-brand-orange/20 space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-brand-orange flex-shrink-0" />
+            <p className="text-xs text-brand-orange font-medium">Set up payments to get paid</p>
+          </div>
+          <p className="text-[11px] text-zinc-400">
+            Connect your bank account or debit card (Cash App card, Chime, etc.) to receive money when someone buys from you. Takes 2 minutes.
+          </p>
+          <Button
+            size="sm"
+            className="w-full"
+            disabled={connectLoading}
+            onClick={async () => {
+              setConnectLoading(true);
+              try {
+                const res = await fetch("/api/stripe/connect", { method: "POST" });
+                const data = await res.json();
+                if (data.onboardingUrl) {
+                  window.location.href = data.onboardingUrl;
+                } else if (data.status === "active") {
+                  setStripeStatus("active");
+                } else {
+                  setError(data.error || "Failed to start payment setup");
+                }
+              } catch {
+                setError("Payment setup failed. Try again.");
+              }
+              setConnectLoading(false);
+            }}
+          >
+            {connectLoading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Setting up...</> : <><CreditCard className="w-3 h-3 mr-1" /> Set Up Payments</>}
+          </Button>
+          <p className="text-[10px] text-zinc-600">You can still list items now and set up payments later.</p>
+        </div>
+      )}
 
       {/* Progress bar */}
       {step > 0 && (

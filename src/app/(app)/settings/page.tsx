@@ -202,6 +202,29 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Payment Setup */}
+      <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
+        <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4 text-brand-orange" /> Get Paid</h3>
+        <p className="text-xs text-zinc-500 mb-3">Connect your bank account or debit card to receive payments from gigs and shop sales.</p>
+        {profile.stripe_connect_account_id ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Payments connected</span>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={async () => {
+              const res = await fetch("/api/stripe/dashboard");
+              const data = await res.json();
+              if (data.url) window.location.href = data.url;
+            }}>Manage</Button>
+          </div>
+        ) : (
+          <Button size="sm" className="w-full" onClick={async () => {
+            const res = await fetch("/api/stripe/connect", { method: "POST" });
+            const data = await res.json();
+            if (data.onboardingUrl) window.location.href = data.onboardingUrl;
+          }}><CreditCard className="w-3 h-3 mr-1" /> Set Up Payments</Button>
+        )}
+        <p className="text-[10px] text-zinc-600 mt-2">Supports bank accounts, debit cards (Cash App, Chime, etc.). Powered by Stripe.</p>
+      </div>
+
       {/* Account Links */}
       <div className="p-4 rounded-xl bg-card border border-zinc-800 mb-4">
         <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2"><Lock className="w-4 h-4 text-brand-orange" /> Account</h3>
