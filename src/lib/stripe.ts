@@ -34,6 +34,7 @@ export async function createConnectAccount(
   const account = await stripe.accounts.create({
     type: "express",
     email,
+    business_type: "individual",
     metadata: { nexgigs_user_id: userId },
     capabilities: {
       card_payments: { requested: true },
