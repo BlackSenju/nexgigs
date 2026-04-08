@@ -232,6 +232,110 @@ Now rewrite BOTH the title and description to be significantly better, more prof
 }
 
 /**
+ * AI Pricing Suggestion — suggest a price range and package tiers based on what the seller is offering.
+ */
+export async function suggestPricing(input: {
+  title: string;
+  description: string;
+  category: string;
+  listingType: string;
+  sessionDuration?: string;
+  sessionFormat?: string;
+  recurringInterval?: string;
+}): Promise<{
+  suggestedPrice: number;
+  priceRange: { low: number; high: number };
+  reasoning: string;
+  packages?: {
+    basic: { price: number; description: string };
+    standard: { price: number; description: string };
+    premium: { price: number; description: string };
+  };
+  tips: string[];
+  subscriptionSuggestion?: string;
+}> {
+  const result = await quickAI(
+    `You are a pricing consultant for NexGigs, a hyperlocal gig marketplace in Milwaukee, WI. Help sellers price their listings competitively.
+
+CRITICAL: Return ONLY valid JSON. No markdown, no backticks. Use this exact format:
+{
+  "suggestedPrice": 50,
+  "priceRange": {"low": 30, "high": 80},
+  "reasoning": "Brief explanation of why this price works",
+  "packages": {
+    "basic": {"price": 30, "description": "What basic includes"},
+    "standard": {"price": 50, "description": "What standard includes"},
+    "premium": {"price": 80, "description": "What premium includes"}
+  },
+  "tips": ["tip1", "tip2", "tip3"],
+  "subscriptionSuggestion": "Optional: suggest if this could be recurring"
+}
+
+PRICING GUIDELINES:
+- Tutoring: $25-60/hr depending on subject and level
+- Personal training: $30-75/session
+- Consulting/coaching: $50-150/hr
+- Music lessons: $25-50/hr
+- Photography: $100-300/session
+- Web design: $200-2000/project
+- Hair/beauty: $20-150/service
+- Lawn care: $30-80/visit
+- Handyman: $40-100/hr
+- Digital products (templates, guides): $5-50
+- Beat packs: $20-100
+- Workshops: $25-75/person
+- Meal prep: $50-150/week
+
+For services: ALWAYS suggest package tiers and mention if it could work as a subscription.
+For digital products: Suggest a single price, lower packages only if bundling makes sense.
+For physical products: Price based on materials + labor + margin.`,
+    `Listing type: ${input.listingType}
+Category: ${input.category}
+Title: ${input.title}
+Description: ${input.description}
+${input.sessionDuration ? `Session duration: ${input.sessionDuration} minutes` : ""}
+${input.sessionFormat ? `Format: ${input.sessionFormat}` : ""}
+${input.recurringInterval ? `Recurring: ${input.recurringInterval}` : ""}
+
+Suggest competitive pricing for this listing. Include package tiers if it's a service, experience, or subscription. If this service could benefit from being offered as a subscription, mention it.`,
+    1500
+  );
+
+  try {
+    let cleaned = result.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(cleaned);
+  } catch {
+    // Fallback pricing based on listing type
+    const defaults: Record<string, number> = {
+      digital: 15,
+      product: 25,
+      service: 50,
+      experience: 40,
+      subscription: 75,
+    };
+    const base = defaults[input.listingType] ?? 30;
+    return {
+      suggestedPrice: base,
+      priceRange: { low: Math.round(base * 0.6), high: Math.round(base * 1.6) },
+      reasoning: "Based on typical marketplace pricing for this category.",
+      packages: {
+        basic: { price: Math.round(base * 0.6), description: "Basic package" },
+        standard: { price: base, description: "Standard package — most popular" },
+        premium: { price: Math.round(base * 1.6), description: "Premium package with extras" },
+      },
+      tips: [
+        "Research what others charge for similar services in your area",
+        "Start slightly lower to build reviews, then raise your price",
+        "Offering packages increases your average order value by 40%",
+      ],
+    };
+  }
+}
+
+/**
  * Generate a personalized weekly digest for a user.
  */
 export async function generateWeeklyDigest(input: {

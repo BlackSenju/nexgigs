@@ -13,6 +13,7 @@ import {
   ArrowLeft, ArrowRight, CheckCircle, Loader2,
   Package, FileText, BookOpen, Calendar, Repeat,
   Clock, Video, MapPin, Users, BookmarkCheck,
+  Sparkles, DollarSign, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -101,6 +102,15 @@ export default function SellPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingSuggestion, setPricingSuggestion] = useState<{
+    suggestedPrice: number;
+    priceRange: { low: number; high: number };
+    reasoning: string;
+    packages?: { basic: { price: number; description: string }; standard: { price: number; description: string }; premium: { price: number; description: string } };
+    tips: string[];
+    subscriptionSuggestion?: string;
+  } | null>(null);
 
   const [form, setForm] = useState({
     listingType: "",
@@ -444,25 +454,203 @@ export default function SellPage() {
           </button>
           <h2 className="text-base font-bold text-white">Set Your Price</h2>
 
+          {/* AI Pricing Assistant */}
+          <button
+            onClick={async () => {
+              setPricingLoading(true);
+              try {
+                const res = await fetch("/api/ai/suggest", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "pricing",
+                    title: form.title,
+                    description: form.description,
+                    category: form.category,
+                    listingType: form.listingType,
+                    sessionDuration: form.sessionDuration,
+                    sessionFormat: form.sessionFormat,
+                    recurringInterval: form.recurringInterval,
+                  }),
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  setPricingSuggestion(data);
+                }
+              } catch { /* ignore */ }
+              setPricingLoading(false);
+            }}
+            disabled={pricingLoading || !form.title}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-brand-orange/30 bg-brand-orange/5 text-brand-orange hover:bg-brand-orange/10 transition-colors disabled:opacity-50"
+          >
+            {pricingLoading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing prices...</>
+            ) : (
+              <><Sparkles className="w-4 h-4" /> Help me price this</>
+            )}
+          </button>
+
+          {/* AI Pricing Results */}
+          {pricingSuggestion && (
+            <div className="p-3 rounded-xl border border-brand-orange/20 bg-zinc-900 space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-brand-orange">
+                <DollarSign className="w-3.5 h-3.5" /> AI Pricing Suggestion
+              </div>
+
+              {/* Suggested price + range */}
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-2xl font-black text-white">${pricingSuggestion.suggestedPrice}</div>
+                  <div className="text-[10px] text-zinc-500">Suggested</div>
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  Range: ${pricingSuggestion.priceRange.low} – ${pricingSuggestion.priceRange.high}
+                </div>
+                <button
+                  onClick={() => updateForm({ price: String(pricingSuggestion.suggestedPrice) })}
+                  className="ml-auto px-2.5 py-1 rounded-lg bg-brand-orange text-white text-xs font-medium hover:bg-orange-600 transition-colors"
+                >
+                  Use this price
+                </button>
+              </div>
+
+              <p className="text-[11px] text-zinc-400">{pricingSuggestion.reasoning}</p>
+
+              {/* Package suggestions */}
+              {pricingSuggestion.packages && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Suggested Packages</span>
+                    <button
+                      onClick={() => {
+                        const pkg = pricingSuggestion.packages!;
+                        updateForm({
+                          priceBasic: String(pkg.basic.price),
+                          priceStandard: String(pkg.standard.price),
+                          pricePremium: String(pkg.premium.price),
+                          basicDescription: pkg.basic.description,
+                          standardDescription: pkg.standard.description,
+                          premiumDescription: pkg.premium.description,
+                        });
+                      }}
+                      className="text-[10px] text-brand-orange hover:underline"
+                    >
+                      Apply all packages
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(["basic", "standard", "premium"] as const).map((tier) => {
+                      const pkg = pricingSuggestion.packages![tier];
+                      return (
+                        <div key={tier} className="p-2 rounded-lg bg-zinc-800 text-center">
+                          <div className="text-[10px] text-zinc-500 capitalize">{tier}</div>
+                          <div className="text-sm font-bold text-white">${pkg.price}</div>
+                          <div className="text-[10px] text-zinc-400 line-clamp-2">{pkg.description}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tips */}
+              {pricingSuggestion.tips.length > 0 && (
+                <div className="space-y-1">
+                  {pricingSuggestion.tips.map((tip, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[11px] text-zinc-400">
+                      <TrendingUp className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
+                      <span>{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Subscription suggestion for services */}
+              {pricingSuggestion.subscriptionSuggestion && form.listingType === "service" && !form.recurringInterval && (
+                <div className="p-2 rounded-lg bg-green-900/20 border border-green-700/30">
+                  <div className="flex items-center gap-1.5 text-[11px] text-green-300">
+                    <Repeat className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium">Subscription idea:</span>
+                  </div>
+                  <p className="text-[11px] text-green-200/70 mt-0.5">{pricingSuggestion.subscriptionSuggestion}</p>
+                  <button
+                    onClick={() => { updateForm({ recurringInterval: "monthly" }); }}
+                    className="mt-1.5 text-[10px] text-green-400 hover:underline"
+                  >
+                    Make this a monthly subscription →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Main price */}
           <CurrencyInput
-            label={form.listingType === "subscription" ? `Price per ${form.recurringInterval || "month"}` : "Price"}
+            label={form.listingType === "subscription" || form.recurringInterval ? `Price per ${form.recurringInterval || "month"}` : "Price"}
             value={form.price}
             onChange={(val) => updateForm({ price: val })}
             min={1}
             placeholder="0.00"
           />
 
+          {/* Service → Subscription upsell */}
+          {form.listingType === "service" && !form.recurringInterval && !pricingSuggestion?.subscriptionSuggestion && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-card border border-zinc-800">
+              <Repeat className="w-4 h-4 text-brand-orange flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-[11px] text-zinc-300">Want recurring income? Offer this as a subscription too.</p>
+              </div>
+              <button
+                onClick={() => updateForm({ recurringInterval: "monthly" })}
+                className="text-[10px] text-brand-orange hover:underline whitespace-nowrap"
+              >
+                Add subscription
+              </button>
+            </div>
+          )}
+
+          {/* Recurring interval selector (shows if service opted into subscription) */}
+          {form.listingType === "service" && form.recurringInterval && (
+            <div className="p-3 rounded-xl bg-card border border-zinc-800">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-zinc-400 flex items-center gap-1">
+                  <Repeat className="w-3 h-3" /> Billing Frequency
+                </label>
+                <button onClick={() => updateForm({ recurringInterval: "" })} className="text-[10px] text-zinc-500 hover:text-white">Remove subscription</button>
+              </div>
+              <div className="flex gap-1.5">
+                {[
+                  { value: "weekly", label: "Weekly" },
+                  { value: "biweekly", label: "Every 2 Weeks" },
+                  { value: "monthly", label: "Monthly" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateForm({ recurringInterval: opt.value })}
+                    className={cn(
+                      "flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                      form.recurringInterval === opt.value
+                        ? "border-brand-orange bg-brand-orange/10 text-white"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Package tiers */}
-          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "digital") && (
+          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "digital" || form.listingType === "subscription") && (
             <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
-              <h3 className="text-xs font-bold text-white">Package Tiers (Optional)</h3>
+              <h3 className="text-xs font-bold text-white">Package Tiers (Optional — increases sales by 40%)</h3>
               <p className="text-[10px] text-zinc-500">
-                {form.listingType === "service"
-                  ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up"
+                {form.listingType === "service" || form.listingType === "subscription"
+                  ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up materials"
                   : form.listingType === "experience"
-                    ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time"
-                    : "Example: Basic = template only, Standard = template + tutorial, Premium = full bundle + support"}
+                    ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time after"
+                    : "Example: Basic = template only, Standard = template + tutorial video, Premium = full bundle + email support"}
               </p>
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2">
