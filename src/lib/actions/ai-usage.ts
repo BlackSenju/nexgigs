@@ -3,12 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 
 const TIER_LIMITS: Record<string, Record<string, number>> = {
-  free: { tips: 3, rewrite: 1, matching: 0 },
-  pro: { tips: 10, rewrite: 999, matching: 0 },
-  elite: { tips: 999, rewrite: 999, matching: 5 },
-  business_starter: { tips: 5, rewrite: 3, matching: 0 },
-  business_growth: { tips: 999, rewrite: 999, matching: 0 },
-  enterprise: { tips: 999, rewrite: 999, matching: 999 },
+  free: { tips: 3, rewrite: 1, matching: 0, pricing: 0 },
+  pro: { tips: 10, rewrite: 999, matching: 0, pricing: 3 },
+  elite: { tips: 999, rewrite: 999, matching: 5, pricing: 999 },
+  business_starter: { tips: 5, rewrite: 3, matching: 0, pricing: 1 },
+  business_growth: { tips: 999, rewrite: 999, matching: 0, pricing: 999 },
+  enterprise: { tips: 999, rewrite: 999, matching: 999, pricing: 999 },
 };
 
 export async function checkAIUsage(
