@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award } from "lucide-react";
 
 export default async function DashboardPage() {
