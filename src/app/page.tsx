@@ -210,9 +210,18 @@ export default async function LandingPage() {
             <Link href="/ghost-wall" className="hover:text-white transition-colors">
               Ghost Wall
             </Link>
+            <Link href="/how-it-works" className="hover:text-white transition-colors">
+              How It Works
+            </Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
           </div>
           <p className="text-xs text-zinc-600 mt-4 max-w-xl mx-auto text-center leading-relaxed sm:text-left">
-            NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk.
+            NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk. All payments processed securely through Stripe. Operated by TECHHIVE, Milwaukee, WI.
           </p>
         </div>
       </footer>

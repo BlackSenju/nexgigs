@@ -123,8 +123,57 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      // Subscription created or renewed
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub = event.data.object as any;
+        const userId = sub.metadata?.nexgigs_user_id;
+        const tier = sub.metadata?.nexgigs_tier;
+
+        if (userId && tier) {
+          await supabase.from("nexgigs_subscriptions").upsert({
+            user_id: userId,
+            tier,
+            stripe_subscription_id: sub.id,
+            status: sub.status === "active" ? "active" : sub.status,
+            price_monthly: (sub.items?.data?.[0]?.price?.unit_amount ?? 0) / 100,
+            current_period_end: sub.current_period_end
+              ? new Date(sub.current_period_end * 1000).toISOString()
+              : null,
+          }, { onConflict: "user_id" });
+
+          await notifyDiscord("subscription_upgraded", {
+            name: userId,
+            tier,
+            price: (sub.items?.data?.[0]?.price?.unit_amount ?? 0) / 100,
+          });
+        }
+        break;
+      }
+
+      // Subscription cancelled
+      case "customer.subscription.deleted": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subDel = event.data.object as any;
+        const userId = subDel.metadata?.nexgigs_user_id;
+
+        if (userId) {
+          await supabase
+            .from("nexgigs_subscriptions")
+            .update({ status: "cancelled" })
+            .eq("user_id", userId);
+
+          await notifyDiscord("security_alert", {
+            message: `Subscription cancelled for user ${userId}`,
+            user: userId,
+          });
+        }
+        break;
+      }
+
       default:
-        // Unhandled event type — log but don't error
+        // Unhandled event type
         break;
     }
   } catch (error) {
