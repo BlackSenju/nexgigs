@@ -111,7 +111,7 @@ export default async function LandingPage() {
             {CATEGORIES.map((name) => (
               <Link
                 key={name}
-                href={`/jobs?category=${encodeURIComponent(name)}`}
+                href="/signup"
                 className="flex items-center gap-3 p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 hover:bg-zinc-800 transition-all group"
               >
                 <div className="text-brand-orange group-hover:scale-110 transition-transform">
@@ -201,15 +201,6 @@ export default async function LandingPage() {
             &copy; {new Date().getFullYear()} NexGigs. Your city. Your skill. Your money.
           </div>
           <div className="flex items-center gap-6 text-sm text-zinc-500">
-            <Link href="/jobs" className="hover:text-white transition-colors">
-              Jobs
-            </Link>
-            <Link href="/safety" className="hover:text-white transition-colors">
-              Safety
-            </Link>
-            <Link href="/ghost-wall" className="hover:text-white transition-colors">
-              Ghost Wall
-            </Link>
             <Link href="/how-it-works" className="hover:text-white transition-colors">
               How It Works
             </Link>
