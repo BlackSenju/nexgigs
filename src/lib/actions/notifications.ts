@@ -28,7 +28,7 @@ export async function markNotificationRead(notificationId: string) {
 
   await supabase
     .from("nexgigs_notifications")
-    .update({ read: true })
+    .update({ is_read: true })
     .eq("id", notificationId)
     .eq("user_id", user.id);
 }
@@ -42,9 +42,9 @@ export async function markAllNotificationsRead() {
 
   await supabase
     .from("nexgigs_notifications")
-    .update({ read: true })
+    .update({ is_read: true })
     .eq("user_id", user.id)
-    .eq("read", false);
+    .eq("is_read", false);
 }
 
 export async function getUnreadCount() {
@@ -58,7 +58,7 @@ export async function getUnreadCount() {
     .from("nexgigs_notifications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .eq("read", false);
+    .eq("is_read", false);
 
   return count ?? 0;
 }
@@ -78,6 +78,6 @@ export async function sendNotification(input: {
     title: input.title,
     body: input.body,
     link: input.link,
-    read: false,
+    is_read: false,
   });
 }

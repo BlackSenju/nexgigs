@@ -27,7 +27,7 @@ interface Notification {
   title: string;
   body: string | null;
   link: string | null;
-  read: boolean;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -76,16 +76,16 @@ export default function NotificationsPage() {
   async function handleMarkAllRead() {
     await markAllNotificationsRead();
     setNotifications((prev) =>
-      prev.map((n) => ({ ...n, read: true }))
+      prev.map((n) => ({ ...n, is_read: true }))
     );
   }
 
   async function handleTap(notification: Notification) {
-    if (!notification.read) {
+    if (!notification.is_read) {
       await markNotificationRead(notification.id);
       setNotifications((prev) =>
         prev.map((n) =>
-          n.id === notification.id ? { ...n, read: true } : n
+          n.id === notification.id ? { ...n, is_read: true } : n
         )
       );
     }
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
     }
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -134,19 +134,19 @@ export default function NotificationsPage() {
                 onClick={() => handleTap(n)}
                 className={cn(
                   "w-full flex items-start gap-3 rounded-xl p-4 text-left transition-colors",
-                  n.read
+                  n.is_read
                     ? "bg-card hover:bg-card/80"
                     : "bg-brand-orange/5 hover:bg-brand-orange/10"
                 )}
               >
                 <div className="relative mt-0.5 shrink-0">
                   <Icon className="w-5 h-5 text-zinc-400" />
-                  {!n.read && (
+                  {!n.is_read && (
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm", n.read ? "text-zinc-300" : "text-white font-semibold")}>
+                  <p className={cn("text-sm", n.is_read ? "text-zinc-300" : "text-white font-semibold")}>
                     {n.title}
                   </p>
                   {n.body && (
