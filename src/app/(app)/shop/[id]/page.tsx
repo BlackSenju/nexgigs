@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { BackButton } from "@/components/ui/back-button";
 import {
-  ShoppingBag, Star, Loader2, Clock, MapPin, Users,
+  ShoppingBag, Loader2, Clock, MapPin, Users,
   FileText, Package, BookOpen, Calendar, Repeat, MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
