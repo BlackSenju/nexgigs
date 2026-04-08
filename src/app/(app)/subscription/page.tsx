@@ -2,7 +2,16 @@
 
 import { Suspense } from "react";
 
-import { CheckCircle, Zap, Crown, Rocket, Loader2 } from "lucide-react";
+import {
+  CheckCircle,
+  Zap,
+  Crown,
+  Rocket,
+  Building2,
+  TrendingUp,
+  Gem,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { cn } from "@/lib/utils";
@@ -10,7 +19,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 
-const TIERS = [
+const GIGGER_TIERS = [
   {
     key: "free",
     name: "Free Gigger",
@@ -54,10 +63,59 @@ const TIERS = [
   },
 ];
 
+const BUSINESS_TIERS = [
+  {
+    key: "business_starter",
+    name: "Business Starter",
+    price: 29.99,
+    icon: Building2,
+    features: [
+      "Company profile page",
+      "10 job posts per month",
+      "Applicant management dashboard",
+      "Team hiring (up to 5 members)",
+      "7% service fee on hires",
+      "Business badge on listings",
+    ],
+  },
+  {
+    key: "business_growth",
+    name: "Business Growth",
+    price: 79.99,
+    icon: TrendingUp,
+    popular: true,
+    features: [
+      "Everything in Starter",
+      "Unlimited job posts",
+      "Talent pool (save favorite giggers)",
+      "Invoice generation",
+      "5% service fee",
+      "Priority support",
+      "Analytics dashboard",
+    ],
+  },
+  {
+    key: "enterprise",
+    name: "Enterprise",
+    price: 199.99,
+    icon: Gem,
+    features: [
+      "Everything in Growth",
+      "Dedicated account manager",
+      "ATS webhook integration",
+      "3% service fee",
+      "Private talent pool",
+      "Custom branding",
+      "Bulk hiring tools",
+    ],
+  },
+];
+
 function SubscriptionPageInner() {
   const [currentTier, setCurrentTier] = useState("free");
   const [loading, setLoading] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [tab, setTab] = useState<"gigger" | "business">("gigger");
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -65,6 +123,10 @@ function SubscriptionPageInner() {
       setSuccess(true);
       const tier = searchParams.get("tier");
       if (tier) setCurrentTier(tier);
+    }
+
+    if (searchParams.get("tab") === "business") {
+      setTab("business");
     }
 
     const supabase = createClient();
@@ -78,7 +140,14 @@ function SubscriptionPageInner() {
         .order("created_at", { ascending: false })
         .limit(1)
         .then(({ data: subs }) => {
-          if (subs && subs.length > 0) setCurrentTier(subs[0].tier);
+          if (subs && subs.length > 0) {
+            setCurrentTier(subs[0].tier);
+            // Auto-select the right tab based on current tier
+            const businessTierKeys = ["business_starter", "business_growth", "enterprise"];
+            if (businessTierKeys.includes(subs[0].tier)) {
+              setTab("business");
+            }
+          }
         });
     });
   }, [searchParams]);
@@ -105,13 +174,43 @@ function SubscriptionPageInner() {
     }
   }
 
+  const tiers = tab === "gigger" ? GIGGER_TIERS : BUSINESS_TIERS;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
       <BackButton fallbackHref="/settings" />
       <h1 className="text-xl font-black text-white mb-1">Upgrade Your Plan</h1>
-      <p className="text-sm text-zinc-400 mb-6">
-        Earn more, get seen first, and keep more of what you make.
+      <p className="text-sm text-zinc-400 mb-4">
+        {tab === "gigger"
+          ? "Earn more, get seen first, and keep more of what you make."
+          : "Hire local talent at scale with powerful business tools."}
       </p>
+
+      {/* Tab Toggle */}
+      <div className="flex rounded-lg bg-zinc-900 border border-zinc-800 p-1 mb-6">
+        <button
+          onClick={() => setTab("gigger")}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors",
+            tab === "gigger"
+              ? "bg-brand-orange text-white"
+              : "text-zinc-400 hover:text-white"
+          )}
+        >
+          For Giggers
+        </button>
+        <button
+          onClick={() => setTab("business")}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors",
+            tab === "business"
+              ? "bg-brand-orange text-white"
+              : "text-zinc-400 hover:text-white"
+          )}
+        >
+          For Businesses
+        </button>
+      </div>
 
       {success && (
         <div className="mb-4 p-3 rounded-xl bg-green-900/30 border border-green-700/50 text-center">
@@ -121,7 +220,7 @@ function SubscriptionPageInner() {
       )}
 
       <div className="space-y-4">
-        {TIERS.map((tier) => {
+        {tiers.map((tier) => {
           const isCurrent = tier.key === currentTier;
           return (
             <div
