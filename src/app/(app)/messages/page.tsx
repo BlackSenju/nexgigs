@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Search, Send, ArrowLeft, User, Loader2 } from "lucide-react";
+import { ContentChecker } from "@/components/ui/ai-assist";
 import { createClient } from "@/lib/supabase/client";
 import {
   getConversations,
@@ -265,6 +266,7 @@ export default function MessagesPage() {
 
       {/* Message input */}
       <div className="px-4 py-3 border-t border-zinc-800">
+        <ContentChecker content={newMessage} className="mb-1" />
         <div className="flex items-center gap-2">
           <input
             type="text"
