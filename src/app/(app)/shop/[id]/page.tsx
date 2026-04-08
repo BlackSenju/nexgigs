@@ -36,6 +36,8 @@ type ShopItem = {
   group_max_size: number | null;
   recurring_interval: string | null;
   refund_policy: string | null;
+  image_url: string | null;
+  image_urls: string[] | null;
   total_sold: number;
   created_at: string;
   seller_id: string;
@@ -137,11 +139,30 @@ export default function ShopItemPage() {
     <div className="max-w-lg mx-auto px-4 py-4">
       <BackButton fallbackHref="/shop" />
 
-      {/* Image placeholder */}
-      <div className="aspect-video rounded-xl bg-zinc-800 flex flex-col items-center justify-center mb-4 gap-2">
-        <TypeIcon className="w-12 h-12 text-zinc-600" />
-        <span className="text-xs text-zinc-600">{TYPE_LABELS[item.listing_type] ?? item.listing_type}</span>
-      </div>
+      {/* Image */}
+      {item.image_url ? (
+        <div className="aspect-video rounded-xl bg-zinc-800 overflow-hidden mb-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="aspect-video rounded-xl bg-zinc-800 flex flex-col items-center justify-center mb-4 gap-2">
+          <TypeIcon className="w-12 h-12 text-zinc-600" />
+          <span className="text-xs text-zinc-600">{TYPE_LABELS[item.listing_type] ?? item.listing_type}</span>
+        </div>
+      )}
+
+      {/* Additional images */}
+      {item.image_urls && item.image_urls.length > 1 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto">
+          {item.image_urls.map((url, i) => (
+            <div key={i} className="flex-shrink-0 w-20 h-20 rounded-lg bg-zinc-800 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`${item.title} ${i + 1}`} className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Type badge */}
       <span className="text-xs text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded-full">

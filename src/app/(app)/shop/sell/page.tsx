@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -8,6 +8,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { BackButton } from "@/components/ui/back-button";
 import { AIJobAssist } from "@/components/ui/ai-assist";
 import { createShopListing } from "@/lib/actions/shop";
+import { uploadShopImage } from "@/lib/actions/uploads";
 import { createClient } from "@/lib/supabase/client";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import {
@@ -15,6 +16,7 @@ import {
   Package, FileText, BookOpen, Calendar, Repeat,
   Clock, Video, MapPin, Users, BookmarkCheck,
   Sparkles, DollarSign, TrendingUp, Lock, Share2, ExternalLink,
+  Camera, X, Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -107,6 +109,9 @@ export default function SellPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [createdItemId, setCreatedItemId] = useState<string | null>(null);
+  const [images, setImages] = useState<Array<{ file: File; preview: string }>>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [pricingSuggestion, setPricingSuggestion] = useState<{
     suggestedPrice: number;
     priceRange: { low: number; high: number };
@@ -174,7 +179,23 @@ export default function SellPage() {
     setSubmitting(true);
     setError(null);
 
+    // Upload images first
+    const imageUrls: string[] = [];
+    if (images.length > 0) {
+      setUploadingImages(true);
+      for (const img of images) {
+        const formData = new FormData();
+        formData.append("file", img.file);
+        const uploadResult = await uploadShopImage(formData);
+        if (uploadResult.imageUrl) {
+          imageUrls.push(uploadResult.imageUrl);
+        }
+      }
+      setUploadingImages(false);
+    }
+
     const result = await createShopListing({
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       title: form.title,
       description: form.description,
       category: form.category,
@@ -556,6 +577,69 @@ export default function SellPage() {
             </div>
           )}
 
+          {/* ── Photo upload ── */}
+          <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-2">
+            <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-brand-orange" /> Photos (up to 5)
+            </h3>
+            <p className="text-[10px] text-zinc-500">
+              {form.listingType === "product"
+                ? "Show your product from multiple angles. Good photos = more sales."
+                : form.listingType === "digital"
+                  ? "Show a preview or mockup of what the buyer gets."
+                  : "Show your workspace, past results, or a professional headshot."}
+            </p>
+
+            {/* Image previews */}
+            {images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {images.map((img, i) => (
+                  <div key={i} className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-800">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => {
+                        URL.revokeObjectURL(img.preview);
+                        setImages(images.filter((_, idx) => idx !== i));
+                      }}
+                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/60 text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {images.length < 5 && (
+              <>
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full p-3 rounded-lg border border-dashed border-zinc-700 text-center hover:border-brand-orange/50 transition-colors"
+                >
+                  <ImageIcon className="w-5 h-5 text-zinc-500 mx-auto" />
+                  <span className="text-[11px] text-zinc-500 mt-1 block">
+                    {images.length === 0 ? "Add photos" : `Add more (${images.length}/5)`}
+                  </span>
+                </button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) { setError("Image must be under 10MB"); return; }
+                    const preview = URL.createObjectURL(file);
+                    setImages([...images, { file, preview }]);
+                    e.target.value = "";
+                  }}
+                />
+              </>
+            )}
+          </div>
+
           <AIJobAssist
             title={form.title}
             description={form.description}
@@ -885,7 +969,7 @@ export default function SellPage() {
           {error && <div className="p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{error}</div>}
 
           <Button className="w-full" size="lg" onClick={handleSubmit} disabled={submitting || !form.price}>
-            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Listing...</> : `List for $${form.price || "0"}${form.recurringInterval ? `/${form.recurringInterval}` : ""}`}
+            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {uploadingImages ? "Uploading photos..." : "Listing..."}</> : `List for $${form.price || "0"}${form.recurringInterval ? `/${form.recurringInterval}` : ""}`}
           </Button>
         </div>
       )}

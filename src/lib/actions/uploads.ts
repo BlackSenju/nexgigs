@@ -116,6 +116,57 @@ export async function uploadPortfolioItem(formData: FormData) {
 }
 
 /**
+ * Upload an image for a shop listing.
+ * File path: shop/{userId}/{timestamp}_{filename}
+ * Returns the public URL.
+ */
+export async function uploadShopImage(formData: FormData) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const file = formData.get("file") as File;
+  if (!file) return { error: "No file provided" };
+
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) return { error: "File must be under 10MB" };
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Only JPEG, PNG, WebP, and GIF images are allowed" };
+  }
+
+  const timestamp = Date.now();
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${user.id}/${timestamp}_${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("shop")
+    .upload(path, file, { contentType: file.type });
+
+  if (uploadError) {
+    // Bucket might not exist — try portfolio bucket as fallback
+    const { error: fallbackError } = await supabase.storage
+      .from("portfolio")
+      .upload(`shop_${path}`, file, { contentType: file.type });
+
+    if (fallbackError) return { error: `Upload failed: ${fallbackError.message}` };
+
+    const { data: urlData } = supabase.storage
+      .from("portfolio")
+      .getPublicUrl(`shop_${path}`);
+
+    return { imageUrl: urlData.publicUrl };
+  }
+
+  const { data: urlData } = supabase.storage
+    .from("shop")
+    .getPublicUrl(path);
+
+  return { imageUrl: urlData.publicUrl };
+}
+
+/**
  * Delete a portfolio item.
  */
 export async function deletePortfolioItem(itemId: string) {
