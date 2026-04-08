@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { BackButton } from "@/components/ui/back-button";
 import {
   ShoppingBag, Loader2, Clock, MapPin, Users,
   FileText, Package, BookOpen, Calendar, Repeat, MessageSquare,
-  Share2, ExternalLink, Trash2,
+  Share2, ExternalLink, Trash2, CheckCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { deleteShopListing } from "@/lib/actions/shop";
@@ -74,16 +74,23 @@ const REFUND_LABELS: Record<string, string> = {
   "30_days": "30-day refund window",
 };
 
-export default function ShopItemPage() {
+function ShopItemPageInner() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [item, setItem] = useState<ShopItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<"basic" | "standard" | "premium" | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [purchased, setPurchased] = useState(false);
 
   useEffect(() => {
+    if (searchParams.get("purchased") === "true") {
+      setPurchased(true);
+    }
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -318,12 +325,50 @@ export default function ShopItemPage() {
         </>
       )}
 
+      {/* Purchase success */}
+      {purchased && (
+        <div className="mt-6 p-4 rounded-xl bg-green-900/30 border border-green-700/50 text-center">
+          <CheckCircle className="w-6 h-6 text-green-400 mx-auto" />
+          <p className="mt-2 text-sm font-medium text-green-300">Purchase complete!</p>
+          <p className="text-xs text-zinc-500 mt-1">The seller has been notified.</p>
+        </div>
+      )}
+
+      {buyError && (
+        <div className="mt-4 p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{buyError}</div>
+      )}
+
       {/* Actions */}
       {!isOwner ? (
         <>
           <div className="flex gap-2 mt-6">
-            <Button size="lg" className="flex-1">
-              Buy Now — ${displayPrice}
+            <Button
+              size="lg"
+              className="flex-1"
+              disabled={buying || purchased}
+              onClick={async () => {
+                setBuying(true);
+                setBuyError(null);
+                try {
+                  const res = await fetch("/api/stripe/shop-checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ itemId: item.id, tier: selectedTier }),
+                  });
+                  const data = await res.json();
+                  if (data.url) {
+                    window.location.href = data.url;
+                  } else {
+                    setBuyError(data.error || "Failed to start checkout");
+                    setBuying(false);
+                  }
+                } catch {
+                  setBuyError("Checkout failed. Try again.");
+                  setBuying(false);
+                }
+              }}
+            >
+              {buying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : purchased ? "Purchased" : `Buy Now — $${displayPrice}`}
             </Button>
             <Button
               size="lg"
@@ -386,5 +431,13 @@ export default function ShopItemPage() {
         All transactions are protected by NexGigs escrow. Payments are held until delivery is confirmed.
       </p>
     </div>
+  );
+}
+
+export default function ShopItemPage() {
+  return (
+    <Suspense fallback={<div className="max-w-lg mx-auto px-4 py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-500" /></div>}>
+      <ShopItemPageInner />
+    </Suspense>
   );
 }
