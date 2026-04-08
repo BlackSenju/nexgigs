@@ -216,11 +216,28 @@ export default function SettingsPage() {
             }}>Manage</Button>
           </div>
         ) : (
-          <Button size="sm" className="w-full" onClick={async () => {
-            const res = await fetch("/api/stripe/connect", { method: "POST" });
-            const data = await res.json();
-            if (data.onboardingUrl) window.location.href = data.onboardingUrl;
-          }}><CreditCard className="w-3 h-3 mr-1" /> Set Up Payments</Button>
+          <>
+            <Button size="sm" className="w-full" id="setup-payments-btn" onClick={async () => {
+              const btn = document.getElementById("setup-payments-btn");
+              if (btn) btn.textContent = "Setting up...";
+              try {
+                const res = await fetch("/api/stripe/connect", { method: "POST" });
+                const data = await res.json();
+                if (data.onboardingUrl) {
+                  window.location.href = data.onboardingUrl;
+                } else if (data.status === "active") {
+                  alert("Your payments are already set up!");
+                  window.location.reload();
+                } else {
+                  alert(data.error || "Failed to start payment setup. Make sure STRIPE_SECRET_KEY is configured.");
+                  if (btn) btn.textContent = "Set Up Payments";
+                }
+              } catch (err) {
+                alert("Payment setup failed. Check your internet connection and try again.");
+                if (btn) btn.textContent = "Set Up Payments";
+              }
+            }}><CreditCard className="w-3 h-3 mr-1" /> Set Up Payments</Button>
+          </>
         )}
         <p className="text-[10px] text-zinc-600 mt-2">Supports bank accounts, debit cards (Cash App, Chime, etc.). Powered by Stripe.</p>
       </div>
