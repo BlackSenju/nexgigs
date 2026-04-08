@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
-import { LogOut } from "lucide-react";
+import { LogOut, Bell } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function Navbar() {
@@ -80,6 +80,14 @@ export function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
+                <Link href="/rewards" className="hidden sm:block">
+                  <Button variant="ghost" size="sm" title="XP Rewards">
+                    XP
+                  </Button>
+                </Link>
+                <button className="relative p-2 text-zinc-400 hover:text-white transition-colors" title="Notifications">
+                  <Bell className="w-4 h-4" />
+                </button>
                 <Link href="/profile/me" title="My Profile" className="relative group">
                   <Avatar
                     src={profile?.avatar_url}

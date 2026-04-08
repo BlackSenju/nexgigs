@@ -30,7 +30,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Redirect unauthenticated users away from protected routes
-  const protectedRoutes = ["/dashboard", "/gigs", "/messages", "/profile/me", "/jobs/post", "/admin"];
+  const protectedRoutes = ["/dashboard", "/gigs", "/messages", "/profile/me", "/jobs/post", "/admin", "/ghost-wall", "/rewards", "/settings", "/earnings"];
   const isProtected = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );

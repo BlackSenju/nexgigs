@@ -33,7 +33,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
-  const [message, setMessage] = useState("");
+  
   const [applied, setApplied] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -110,7 +110,7 @@ export default function JobDetailPage() {
     const result = await applyToJob(
       id as string,
       bidAmount ? Number(bidAmount) : null,
-      message
+      ""
     );
     if (result.error) {
       setApplyError(result.error);
@@ -305,7 +305,7 @@ export default function JobDetailPage() {
           </div>
         ) : showApply ? (
           <div className="p-4 rounded-xl bg-card border border-zinc-700 space-y-3">
-            <h3 className="font-bold text-white">Apply for this gig</h3>
+            <h3 className="font-bold text-white">Place your bid</h3>
             {applyError && (
               <div className="p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{applyError}</div>
             )}
@@ -316,22 +316,16 @@ export default function JobDetailPage() {
               placeholder={job.price ? String(job.price) : "0.00"}
               min={10}
             />
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400">Message to poster</label>
-              <textarea value={message} onChange={(e) => setMessage(e.target.value)}
-                placeholder="Why you're the right person for this job..." rows={3}
-                className="w-full px-3 py-2 rounded-lg bg-background border border-zinc-700 text-white text-sm focus:outline-none focus:border-brand-orange resize-none" />
-            </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowApply(false)} disabled={submitting}>Cancel</Button>
               <Button size="sm" className="flex-1" onClick={handleApply} disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit Application"}
+                {submitting ? "Submitting..." : "Submit Bid"}
               </Button>
             </div>
           </div>
         ) : (
           <div className="flex gap-3">
-            <Button size="lg" className="flex-1" onClick={() => setShowApply(true)}>Apply Now</Button>
+            <Button size="lg" className="flex-1" onClick={() => setShowApply(true)}>Bid Now</Button>
             <Button variant="outline" size="lg"><MessageSquare className="w-4 h-4" /></Button>
           </div>
         )}
