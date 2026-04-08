@@ -12,16 +12,57 @@ import { SERVICE_CATEGORIES } from "@/lib/constants";
 import {
   ArrowLeft, ArrowRight, CheckCircle, Loader2,
   Package, FileText, BookOpen, Calendar, Repeat,
+  Clock, Video, MapPin, Users, BookmarkCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 const LISTING_TYPES = [
-  { key: "digital", label: "Digital Product", desc: "Files, templates, guides, ebooks, beat packs", icon: FileText },
-  { key: "product", label: "Physical Product", desc: "Handmade items, custom goods, art, crafts", icon: Package },
-  { key: "service", label: "Service", desc: "Tutoring, training, consulting, coaching", icon: BookOpen },
-  { key: "experience", label: "Experience", desc: "Workshops, group classes, events", icon: Calendar },
-  { key: "subscription", label: "Subscription", desc: "Weekly/monthly recurring service", icon: Repeat },
+  {
+    key: "digital",
+    label: "Digital Product",
+    desc: "Files, templates, guides, ebooks, beat packs, presets",
+    icon: FileText,
+    hint: "Upload once, sell forever. No shipping needed.",
+    titlePlaceholder: "e.g. Logo Template Pack, Beat Pack Vol. 1, Photography Presets",
+    descPlaceholder: "What's included? How many files? What format (PDF, MP3, PSD, etc.)? What will the buyer be able to do with it?",
+  },
+  {
+    key: "product",
+    label: "Physical Product",
+    desc: "Handmade items, custom goods, art, crafts, clothing",
+    icon: Package,
+    hint: "Sell physical items with shipping or local meetup.",
+    titlePlaceholder: "e.g. Custom Resin Art, Handmade Candles, Printed T-Shirt",
+    descPlaceholder: "Describe the item: size, materials, colors available. Is it made to order or ready to ship? How long does it take to make?",
+  },
+  {
+    key: "service",
+    label: "Service",
+    desc: "Tutoring, training, consulting, coaching, lessons",
+    icon: BookOpen,
+    hint: "Sell your expertise by the session or package.",
+    titlePlaceholder: "e.g. Python Tutoring, Personal Training, Tax Consulting",
+    descPlaceholder: "What will the client learn or gain? What's your experience/qualifications? What should they bring or prepare?",
+  },
+  {
+    key: "experience",
+    label: "Experience",
+    desc: "Workshops, group classes, events, bootcamps",
+    icon: Calendar,
+    hint: "Host group sessions that multiple people can join.",
+    titlePlaceholder: "e.g. Beginner Pottery Workshop, Fitness Bootcamp, Cooking Class",
+    descPlaceholder: "What will attendees do? What skill level is required? What's provided (materials, equipment)? Where does it take place?",
+  },
+  {
+    key: "subscription",
+    label: "Subscription",
+    desc: "Weekly/monthly recurring service or content",
+    icon: Repeat,
+    hint: "Recurring income — clients pay weekly, biweekly, or monthly.",
+    titlePlaceholder: "e.g. Weekly Meal Prep, Monthly Lawn Care, Biweekly Coaching Sessions",
+    descPlaceholder: "What does the client get each billing cycle? How often do you deliver? What's included vs. extra? Can they pause or cancel anytime?",
+  },
 ];
 
 const REFUND_OPTIONS = [
@@ -32,8 +73,8 @@ const REFUND_OPTIONS = [
 ];
 
 const SESSION_FORMATS = [
-  { value: "in_person", label: "In-person" },
-  { value: "video", label: "Video call" },
+  { value: "in_person", label: "In-person only" },
+  { value: "video", label: "Video call only" },
   { value: "both", label: "Both (in-person & video)" },
 ];
 
@@ -44,11 +85,23 @@ const CONDITIONS = [
   { value: "fair", label: "Fair" },
 ];
 
+const DURATION_OPTIONS = [
+  { value: "15", label: "15 min" },
+  { value: "30", label: "30 min" },
+  { value: "45", label: "45 min" },
+  { value: "60", label: "1 hour" },
+  { value: "90", label: "1.5 hours" },
+  { value: "120", label: "2 hours" },
+  { value: "180", label: "3 hours" },
+  { value: "240", label: "4+ hours" },
+];
+
 export default function SellPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     listingType: "",
     title: "",
@@ -71,6 +124,8 @@ export default function SellPage() {
     recurringInterval: "",
     refundPolicy: "no_refunds",
   });
+
+  const typeConfig = LISTING_TYPES.find((t) => t.key === form.listingType);
 
   function updateForm(updates: Partial<typeof form>) {
     setForm({ ...form, ...updates });
@@ -121,7 +176,7 @@ export default function SellPage() {
         <p className="mt-2 text-zinc-400">Your listing is now live in the NexGigs Shop.</p>
         <div className="mt-6 flex flex-col gap-2">
           <Link href="/shop"><Button className="w-full">View Shop</Button></Link>
-          <Link href="/profile/me"><Button variant="outline" className="w-full">Back to Profile</Button></Link>
+          <Link href="/shop/sell"><Button variant="outline" className="w-full" onClick={() => { setSubmitted(false); setStep(0); setForm({ ...form, title: "", description: "", price: "" }); }}>List Another</Button></Link>
         </div>
       </div>
     );
@@ -133,7 +188,16 @@ export default function SellPage() {
       <h1 className="text-xl font-black text-white mb-1">Sell Something</h1>
       <p className="text-sm text-zinc-400 mb-6">List a product, service, or experience for sale.</p>
 
-      {/* Step 0: Choose listing type */}
+      {/* Progress bar */}
+      {step > 0 && (
+        <div className="flex gap-1 mb-4">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className={cn("flex-1 h-1 rounded-full", step >= s ? "bg-brand-orange" : "bg-zinc-800")} />
+          ))}
+        </div>
+      )}
+
+      {/* ─── Step 0: Choose listing type ─── */}
       {step === 0 && (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-white">What are you selling?</h2>
@@ -158,13 +222,17 @@ export default function SellPage() {
         </div>
       )}
 
-      {/* Step 1: Details */}
-      {step === 1 && (
+      {/* ─── Step 1: Details (tailored per type) ─── */}
+      {step === 1 && typeConfig && (
         <div className="space-y-4">
           <button onClick={() => setStep(0)} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1">
             <ArrowLeft className="w-3 h-3" /> Change listing type
           </button>
-          <h2 className="text-base font-bold text-white">Describe your listing</h2>
+
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-brand-orange/5 border border-brand-orange/20">
+            <typeConfig.icon className="w-4 h-4 text-brand-orange flex-shrink-0" />
+            <p className="text-xs text-brand-orange">{typeConfig.hint}</p>
+          </div>
 
           <Combobox
             options={SERVICE_CATEGORIES.map((c) => ({ value: c.name, label: c.name }))}
@@ -178,7 +246,7 @@ export default function SellPage() {
             label="Title"
             value={form.title}
             onChange={(e) => updateForm({ title: e.target.value })}
-            placeholder="What are you selling?"
+            placeholder={typeConfig.titlePlaceholder}
           />
 
           <div className="space-y-1">
@@ -186,59 +254,158 @@ export default function SellPage() {
             <textarea
               value={form.description}
               onChange={(e) => updateForm({ description: e.target.value })}
-              rows={4}
-              placeholder="Describe what you are offering. Be specific about what the buyer gets."
+              rows={5}
+              placeholder={typeConfig.descPlaceholder}
               className="w-full px-4 py-2.5 rounded-lg border border-zinc-700 bg-card text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange resize-none"
             />
           </div>
 
-          <AIJobAssist
-            title={form.title}
-            description={form.description}
-            category={form.category}
-            onApplySuggestion={(text) => updateForm({ description: text })}
-          />
+          {/* ── Service / Experience / Subscription: session details on step 1 ── */}
+          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "subscription") && (
+            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-brand-orange" />
+                {form.listingType === "subscription" ? "Service Details" : "Session Details"}
+              </h3>
 
-          <Button className="w-full" onClick={() => setStep(2)} disabled={!form.title || !form.category}>
-            Continue <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-      )}
-
-      {/* Step 2: Pricing & Type-specific fields */}
-      {step === 2 && (
-        <div className="space-y-4">
-          <button onClick={() => setStep(1)} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1">
-            <ArrowLeft className="w-3 h-3" /> Back to details
-          </button>
-          <h2 className="text-base font-bold text-white">Pricing & Options</h2>
-
-          <CurrencyInput label="Price" value={form.price} onChange={(val) => updateForm({ price: val })} min={1} placeholder="0.00" />
-
-          {/* Package tiers (optional) */}
-          <div className="p-3 rounded-xl bg-card border border-zinc-800">
-            <h3 className="text-xs font-bold text-white mb-2">Package Tiers (Optional)</h3>
-            <p className="text-[10px] text-zinc-500 mb-3">Offer Basic, Standard, and Premium options at different prices.</p>
-            <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Input label="Basic $" value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })} placeholder="25" />
-                <Input label="Standard $" value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })} placeholder="50" />
-                <Input label="Premium $" value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })} placeholder="100" />
+              {/* Session format */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5 flex items-center gap-1">
+                  <Video className="w-3 h-3" /> How will you deliver this?
+                </label>
+                <div className="flex gap-1.5">
+                  {SESSION_FORMATS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => updateForm({ sessionFormat: opt.value })}
+                      className={cn(
+                        "flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                        form.sessionFormat === opt.value
+                          ? "border-brand-orange bg-brand-orange/10 text-white"
+                          : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Physical product fields */}
+              {/* Duration */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Session Duration
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DURATION_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => updateForm({ sessionDuration: opt.value })}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors",
+                        form.sessionDuration === opt.value
+                          ? "border-brand-orange bg-brand-orange/10 text-white"
+                          : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Location for in-person */}
+              {(form.sessionFormat === "in_person" || form.sessionFormat === "both") && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-zinc-800/50">
+                  <MapPin className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+                  <p className="text-[11px] text-zinc-400">For in-person sessions, your city from your profile will be shown. Exact location is shared after booking.</p>
+                </div>
+              )}
+
+              {/* Group size for experiences */}
+              {form.listingType === "experience" && (
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5 flex items-center gap-1">
+                    <Users className="w-3 h-3" /> Max Group Size
+                  </label>
+                  <div className="flex gap-1.5">
+                    {["2", "5", "10", "15", "20", "30"].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => updateForm({ groupMaxSize: size })}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors",
+                          form.groupMaxSize === size
+                            ? "border-brand-orange bg-brand-orange/10 text-white"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Billing frequency for subscriptions */}
+              {form.listingType === "subscription" && (
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5 flex items-center gap-1">
+                    <Repeat className="w-3 h-3" /> Billing Frequency
+                  </label>
+                  <div className="flex gap-1.5">
+                    {[
+                      { value: "weekly", label: "Weekly" },
+                      { value: "biweekly", label: "Every 2 Weeks" },
+                      { value: "monthly", label: "Monthly" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateForm({ recurringInterval: opt.value })}
+                        className={cn(
+                          "flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                          form.recurringInterval === opt.value
+                            ? "border-brand-orange bg-brand-orange/10 text-white"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Physical product: condition + delivery on step 1 ── */}
           {form.listingType === "product" && (
-            <div className="space-y-3">
+            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-brand-orange" /> Product Details
+              </h3>
               <Combobox options={CONDITIONS} value={form.condition} onChange={(val) => updateForm({ condition: val })} label="Condition" />
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Delivery Method</label>
-                <div className="flex gap-2">
-                  {["none", "shipping", "meetup", "both"].map((opt) => (
-                    <button key={opt} onClick={() => updateForm({ shippingType: opt })}
-                      className={cn("flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border", form.shippingType === opt ? "border-brand-orange bg-brand-orange/10 text-white" : "border-zinc-700 text-zinc-400")}
-                    >{opt === "none" ? "Pickup" : opt === "both" ? "Ship or Meet" : opt.charAt(0).toUpperCase() + opt.slice(1)}</button>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">How will the buyer get this?</label>
+                <div className="flex gap-1.5">
+                  {[
+                    { value: "none", label: "Local Pickup" },
+                    { value: "shipping", label: "Shipping" },
+                    { value: "meetup", label: "Meetup" },
+                    { value: "both", label: "Ship or Meetup" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => updateForm({ shippingType: opt.value })}
+                      className={cn(
+                        "flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                        form.shippingType === opt.value
+                          ? "border-brand-orange bg-brand-orange/10 text-white"
+                          : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -248,27 +415,66 @@ export default function SellPage() {
             </div>
           )}
 
-          {/* Service fields */}
-          {(form.listingType === "service" || form.listingType === "experience") && (
-            <div className="space-y-3">
-              <Combobox options={SESSION_FORMATS} value={form.sessionFormat} onChange={(val) => updateForm({ sessionFormat: val })} label="Session Format" />
-              <Input label="Session Duration (minutes)" type="number" value={form.sessionDuration} onChange={(e) => updateForm({ sessionDuration: e.target.value })} placeholder="60" />
-              {form.listingType === "experience" && (
-                <Input label="Max Group Size" type="number" value={form.groupMaxSize} onChange={(e) => updateForm({ groupMaxSize: e.target.value })} placeholder="10" />
-              )}
+          {/* ── Digital product: format hint ── */}
+          {form.listingType === "digital" && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-card border border-zinc-800">
+              <BookmarkCheck className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+              <p className="text-[11px] text-zinc-400">Digital products are delivered instantly after purchase. Make sure your description includes the file format and what the buyer gets.</p>
             </div>
           )}
 
-          {/* Subscription fields */}
-          {form.listingType === "subscription" && (
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Billing Frequency</label>
-              <div className="flex gap-2">
-                {["weekly", "biweekly", "monthly"].map((opt) => (
-                  <button key={opt} onClick={() => updateForm({ recurringInterval: opt })}
-                    className={cn("flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border", form.recurringInterval === opt ? "border-brand-orange bg-brand-orange/10 text-white" : "border-zinc-700 text-zinc-400")}
-                  >{opt.charAt(0).toUpperCase() + opt.slice(1)}</button>
-                ))}
+          <AIJobAssist
+            title={form.title}
+            description={form.description}
+            category={form.category}
+            onApplySuggestion={(text) => updateForm({ description: text })}
+          />
+
+          <Button className="w-full" onClick={() => setStep(2)} disabled={!form.title || !form.category}>
+            Continue to Pricing <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
+      {/* ─── Step 2: Pricing & Review ─── */}
+      {step === 2 && typeConfig && (
+        <div className="space-y-4">
+          <button onClick={() => setStep(1)} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1">
+            <ArrowLeft className="w-3 h-3" /> Back to details
+          </button>
+          <h2 className="text-base font-bold text-white">Set Your Price</h2>
+
+          {/* Main price */}
+          <CurrencyInput
+            label={form.listingType === "subscription" ? `Price per ${form.recurringInterval || "month"}` : "Price"}
+            value={form.price}
+            onChange={(val) => updateForm({ price: val })}
+            min={1}
+            placeholder="0.00"
+          />
+
+          {/* Package tiers */}
+          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "digital") && (
+            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+              <h3 className="text-xs font-bold text-white">Package Tiers (Optional)</h3>
+              <p className="text-[10px] text-zinc-500">
+                {form.listingType === "service"
+                  ? "Example: Basic = 30 min session, Standard = 1 hour, Premium = 1 hour + follow-up"
+                  : form.listingType === "experience"
+                    ? "Example: Basic = group spot, Standard = front row, Premium = VIP + 1-on-1 time"
+                    : "Example: Basic = template only, Standard = template + tutorial, Premium = full bundle + support"}
+              </p>
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input label="Basic $" value={form.priceBasic} onChange={(e) => updateForm({ priceBasic: e.target.value })} placeholder="25" />
+                  <Input label="Standard $" value={form.priceStandard} onChange={(e) => updateForm({ priceStandard: e.target.value })} placeholder="50" />
+                  <Input label="Premium $" value={form.pricePremium} onChange={(e) => updateForm({ pricePremium: e.target.value })} placeholder="100" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Input label="Basic includes" value={form.basicDescription} onChange={(e) => updateForm({ basicDescription: e.target.value })} placeholder="What's in Basic?" />
+                  <Input label="Standard includes" value={form.standardDescription} onChange={(e) => updateForm({ standardDescription: e.target.value })} placeholder="What's in Standard?" />
+                  <Input label="Premium includes" value={form.premiumDescription} onChange={(e) => updateForm({ premiumDescription: e.target.value })} placeholder="What's in Premium?" />
+                </div>
               </div>
             </div>
           )}
@@ -276,12 +482,31 @@ export default function SellPage() {
           {/* Refund policy */}
           <Combobox options={REFUND_OPTIONS} value={form.refundPolicy} onChange={(val) => updateForm({ refundPolicy: val })} label="Refund Policy" />
 
-          <p className="text-[10px] text-zinc-500">Note: NexGigs reserves the right to mediate disputes and override refund policies to protect buyers from scams.</p>
+          {/* Review summary */}
+          <div className="p-3 rounded-xl bg-zinc-800/50 border border-zinc-700 space-y-1.5">
+            <h3 className="text-xs font-bold text-white">Review</h3>
+            <div className="text-[11px] text-zinc-400 space-y-1">
+              <p><span className="text-zinc-500">Type:</span> <span className="text-white">{typeConfig.label}</span></p>
+              <p><span className="text-zinc-500">Title:</span> <span className="text-white">{form.title}</span></p>
+              <p><span className="text-zinc-500">Category:</span> <span className="text-white">{form.category}</span></p>
+              <p><span className="text-zinc-500">Price:</span> <span className="text-white font-bold">${form.price || "0"}{form.recurringInterval ? `/${form.recurringInterval}` : ""}</span></p>
+              {form.sessionDuration && <p><span className="text-zinc-500">Duration:</span> <span className="text-white">{form.sessionDuration} min</span></p>}
+              {form.sessionFormat && (form.listingType === "service" || form.listingType === "experience" || form.listingType === "subscription") && (
+                <p><span className="text-zinc-500">Format:</span> <span className="text-white capitalize">{form.sessionFormat.replace("_", " ")}</span></p>
+              )}
+              {form.groupMaxSize && <p><span className="text-zinc-500">Max group:</span> <span className="text-white">{form.groupMaxSize}</span></p>}
+              {form.listingType === "product" && <p><span className="text-zinc-500">Condition:</span> <span className="text-white capitalize">{form.condition}</span></p>}
+              <p><span className="text-zinc-500">Refund:</span> <span className="text-white">{REFUND_OPTIONS.find((r) => r.value === form.refundPolicy)?.label}</span></p>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-zinc-500">NexGigs takes a 10% commission on all shop sales. You keep ${form.price ? (Number(form.price) * 0.9).toFixed(2) : "0.00"} per sale.</p>
+          <p className="text-[10px] text-zinc-500">NexGigs reserves the right to mediate disputes and override refund policies to protect buyers.</p>
 
           {error && <div className="p-2 rounded-lg bg-brand-red/10 text-brand-red text-sm">{error}</div>}
 
           <Button className="w-full" size="lg" onClick={handleSubmit} disabled={submitting || !form.price}>
-            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Listing...</> : "List for Sale"}
+            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Listing...</> : `List for $${form.price || "0"}${form.recurringInterval ? `/${form.recurringInterval}` : ""}`}
           </Button>
         </div>
       )}
