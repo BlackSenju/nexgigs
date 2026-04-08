@@ -34,6 +34,7 @@ type AuditAction =
   | "shop.item_listed"
   | "shop.item_deleted"
   | "shop.order_placed"
+  | "shop.reward_redeemed"
   | "subscription.upgraded"
   | "subscription.cancelled"
   | "admin.action";
