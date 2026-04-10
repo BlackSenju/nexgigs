@@ -180,6 +180,30 @@ export default function SellPage() {
     groupMaxSize: "",
     recurringInterval: "",
     refundPolicy: "no_refunds",
+    // Pricing model
+    pricingModel: "flat" as string, // "flat", "hourly", "per_session", "per_person"
+    hourlyRate: "",
+    // Digital
+    fileFormat: "",
+    deliveryMethod: "instant" as string, // "instant", "email", "link"
+    // Physical
+    quantityAvailable: "",
+    madeToOrder: false,
+    // Service
+    sessionsIncluded: "", // number of sessions in package
+    availableDays: "" as string, // comma-separated: "Mon,Tue,Wed"
+    availableHours: "", // e.g. "9am-5pm"
+    cancellationPolicy: "flexible" as string, // "flexible", "moderate", "strict"
+    // Experience
+    eventDate: "",
+    eventTime: "",
+    isRecurringEvent: false,
+    locationDetails: "",
+    materialsIncluded: "",
+    minAttendees: "",
+    // Subscription
+    sessionsPerCycle: "",
+    trialSession: false,
   });
 
   const typeConfig = LISTING_TYPES.find((t) => t.key === form.listingType);
@@ -514,6 +538,84 @@ export default function SellPage() {
                   </div>
                 </div>
               )}
+
+              {/* Sessions per package/cycle */}
+              {(form.listingType === "service" || form.listingType === "subscription") && (
+                <Input label="Sessions Included" type="number" value={form.sessionsIncluded} onChange={(e) => updateForm({ sessionsIncluded: e.target.value })} placeholder="e.g. 4 sessions per month" />
+              )}
+
+              {/* Availability */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Your Availability</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                    const selected = form.availableDays.split(",").filter(Boolean).includes(day);
+                    return (
+                      <button key={day} onClick={() => {
+                        const current = form.availableDays.split(",").filter(Boolean);
+                        const updated = selected ? current.filter((d) => d !== day) : [...current, day];
+                        updateForm({ availableDays: updated.join(",") });
+                      }} className={cn("px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors",
+                        selected ? "border-brand-orange bg-brand-orange/10 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                      )}>
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Input label="Hours" value={form.availableHours} onChange={(e) => updateForm({ availableHours: e.target.value })} placeholder="e.g. 9am - 5pm" />
+              </div>
+
+              {/* Cancellation policy */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Cancellation Policy</label>
+                <div className="flex gap-1.5">
+                  {[
+                    { value: "flexible", label: "Flexible", desc: "Free cancel up to 24hrs before" },
+                    { value: "moderate", label: "Moderate", desc: "Free cancel up to 48hrs before" },
+                    { value: "strict", label: "Strict", desc: "No refunds for cancellations" },
+                  ].map((opt) => (
+                    <button key={opt.value} onClick={() => updateForm({ cancellationPolicy: opt.value })}
+                      className={cn("flex-1 p-2 rounded-lg text-center border transition-colors",
+                        form.cancellationPolicy === opt.value ? "border-brand-orange bg-brand-orange/10" : "border-zinc-700 hover:border-zinc-500"
+                      )}>
+                      <div className="text-[11px] font-medium text-white">{opt.label}</div>
+                      <div className="text-[9px] text-zinc-500">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subscription-specific: sessions per cycle & trial */}
+              {form.listingType === "subscription" && (
+                <>
+                  <Input label="Sessions per Billing Cycle" type="number" value={form.sessionsPerCycle} onChange={(e) => updateForm({ sessionsPerCycle: e.target.value })} placeholder="e.g. 4 sessions per month" />
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={form.trialSession} onChange={(e) => updateForm({ trialSession: e.target.checked })} className="rounded border-zinc-700" />
+                    <label className="text-xs text-zinc-400">Offer a free trial session</label>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Experience-specific: event details ── */}
+          {form.listingType === "experience" && (
+            <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-brand-orange" /> Event Details
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Event Date" type="date" value={form.eventDate} onChange={(e) => updateForm({ eventDate: e.target.value })} />
+                <Input label="Event Time" type="time" value={form.eventTime} onChange={(e) => updateForm({ eventTime: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={form.isRecurringEvent} onChange={(e) => updateForm({ isRecurringEvent: e.target.checked })} className="rounded border-zinc-700" />
+                <label className="text-xs text-zinc-400">This is a recurring event (e.g. weekly class)</label>
+              </div>
+              <Input label="Location" value={form.locationDetails} onChange={(e) => updateForm({ locationDetails: e.target.value })} placeholder="Address or 'Provided after booking'" />
+              <Input label="What's Included" value={form.materialsIncluded} onChange={(e) => updateForm({ materialsIncluded: e.target.value })} placeholder="e.g. All materials, snacks, equipment" />
+              <Input label="Minimum Attendees" type="number" value={form.minAttendees} onChange={(e) => updateForm({ minAttendees: e.target.value })} placeholder="e.g. 3 (leave blank for no minimum)" />
             </div>
           )}
 
@@ -622,15 +724,45 @@ export default function SellPage() {
                 onChange={(e) => updateForm({ customOptions: e.target.value })}
                 placeholder="e.g. Gold, Silver, Rose Gold or 14in, 16in, 18in chain"
               />
+
+              {/* Quantity & Made to order */}
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="Quantity Available" type="number" value={form.quantityAvailable} onChange={(e) => updateForm({ quantityAvailable: e.target.value })} placeholder="e.g. 10" />
+                <div className="flex items-center gap-2 p-2">
+                  <input type="checkbox" checked={form.madeToOrder} onChange={(e) => updateForm({ madeToOrder: e.target.checked })} className="rounded border-zinc-700" />
+                  <label className="text-xs text-zinc-400">Made to order</label>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* ── Digital product: format hint ── */}
+          {/* ── Digital product: format hint + details ── */}
           {form.listingType === "digital" && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-card border border-zinc-800">
-              <BookmarkCheck className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-              <p className="text-[11px] text-zinc-400">Digital products are delivered instantly after purchase. Make sure your description includes the file format and what the buyer gets.</p>
-            </div>
+            <>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-card border border-zinc-800">
+                <BookmarkCheck className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                <p className="text-[11px] text-zinc-400">Digital products are delivered instantly after purchase. Make sure your description includes the file format and what the buyer gets.</p>
+              </div>
+              <div className="p-3 rounded-xl bg-card border border-zinc-800 space-y-3">
+                <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-brand-orange" /> Digital Product Details
+                </h3>
+                <Input label="File Format" value={form.fileFormat} onChange={(e) => updateForm({ fileFormat: e.target.value })} placeholder="e.g. PDF, MP3, PSD, ZIP, MP4" />
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Delivery Method</label>
+                  <div className="flex gap-1.5">
+                    {[{ value: "instant", label: "Instant Download" }, { value: "email", label: "Sent via Email" }, { value: "link", label: "Download Link" }].map((opt) => (
+                      <button key={opt.value} onClick={() => updateForm({ deliveryMethod: opt.value })}
+                        className={cn("flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                          form.deliveryMethod === opt.value ? "border-brand-orange bg-brand-orange/10 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                        )}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           {/* ── Photo upload ── */}
@@ -857,9 +989,38 @@ export default function SellPage() {
             </div>
           )}
 
+          {/* Pricing model selector for service/experience/subscription */}
+          {(form.listingType === "service" || form.listingType === "experience" || form.listingType === "subscription") && (
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">How do you charge?</label>
+              <div className="flex gap-1.5">
+                {[
+                  { value: "flat", label: "Flat Rate" },
+                  { value: "hourly", label: "Per Hour" },
+                  { value: "per_session", label: "Per Session" },
+                  ...(form.listingType === "experience" ? [{ value: "per_person", label: "Per Person" }] : []),
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => updateForm({ pricingModel: opt.value })}
+                    className={cn("flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-colors",
+                      form.pricingModel === opt.value ? "border-brand-orange bg-brand-orange/10 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    )}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Main price */}
           <CurrencyInput
-            label={form.listingType === "subscription" || form.recurringInterval ? `Price per ${form.recurringInterval || "month"}` : "Price"}
+            label={
+              form.listingType === "subscription" || form.recurringInterval
+                ? `Price per ${form.recurringInterval || "month"}`
+                : form.pricingModel === "hourly" ? "Rate per hour"
+                : form.pricingModel === "per_session" ? "Price per session"
+                : form.pricingModel === "per_person" ? "Price per person"
+                : "Price"
+            }
             value={form.price}
             onChange={(val) => updateForm({ price: val })}
             min={1}
@@ -1015,6 +1176,15 @@ export default function SellPage() {
                   {[form.priceBasic && `$${form.priceBasic}`, form.priceStandard && `$${form.priceStandard}`, form.pricePremium && `$${form.pricePremium}`].filter(Boolean).join(" / ")}
                 </span></p>
               )}
+              {form.pricingModel !== "flat" && <p><span className="text-zinc-500">Pricing:</span> <span className="text-white capitalize">{form.pricingModel.replace("_", " ")}</span></p>}
+              {form.fileFormat && <p><span className="text-zinc-500">Format:</span> <span className="text-white">{form.fileFormat}</span></p>}
+              {form.quantityAvailable && <p><span className="text-zinc-500">Quantity:</span> <span className="text-white">{form.quantityAvailable}{form.madeToOrder ? " (made to order)" : ""}</span></p>}
+              {form.sessionsIncluded && <p><span className="text-zinc-500">Sessions:</span> <span className="text-white">{form.sessionsIncluded} per {form.recurringInterval || "package"}</span></p>}
+              {form.availableDays && <p><span className="text-zinc-500">Available:</span> <span className="text-white">{form.availableDays} {form.availableHours}</span></p>}
+              {form.eventDate && <p><span className="text-zinc-500">Date:</span> <span className="text-white">{form.eventDate} {form.eventTime}</span></p>}
+              {form.locationDetails && <p><span className="text-zinc-500">Location:</span> <span className="text-white">{form.locationDetails}</span></p>}
+              {form.cancellationPolicy !== "flexible" && <p><span className="text-zinc-500">Cancellation:</span> <span className="text-white capitalize">{form.cancellationPolicy}</span></p>}
+              {form.trialSession && <p><span className="text-zinc-500">Trial:</span> <span className="text-white">Free first session</span></p>}
               <p><span className="text-zinc-500">Refund:</span> <span className="text-white">{REFUND_OPTIONS.find((r) => r.value === form.refundPolicy)?.label}</span></p>
             </div>
           </div>
