@@ -7,6 +7,7 @@ import { MapPin, Search, Loader2, List, Map as MapIcon, Navigation } from "lucid
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { calculateDistance } from "@/lib/distance";
+import { DemandAlerts } from "@/components/jobs/demand-alerts";
 
 const JobMap = lazy(() =>
   import("@/components/jobs/job-map").then((mod) => ({ default: mod.JobMap }))
@@ -235,6 +236,9 @@ export default function JobFeedPage() {
       <div className="mb-4">
         <JobFilters selected={selectedCategory} onSelect={setSelectedCategory} />
       </div>
+
+      {/* High Demand Alerts */}
+      <DemandAlerts onCategorySelect={(category) => setSelectedCategory(category)} />
 
       {/* Map view */}
       {viewMode === "map" && (
