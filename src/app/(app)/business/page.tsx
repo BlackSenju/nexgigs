@@ -86,26 +86,6 @@ const PRICING_TIERS = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "NexGigs made it so easy to find reliable local help for our events. The quality of talent is outstanding.",
-    author: "Sarah M.",
-    role: "Event Planning Co.",
-    stars: 5,
-  },
-  {
-    quote: "We went from spending days on hiring to finding great contractors in hours. The applicant management is a game changer.",
-    author: "Marcus T.",
-    role: "Property Manager",
-    stars: 5,
-  },
-  {
-    quote: "The analytics dashboard helps us track our hiring spend and optimize our postings. Worth every penny.",
-    author: "Lisa K.",
-    role: "Cleaning Service LLC",
-    stars: 5,
-  },
-];
 
 export default function BusinessPage() {
   return (
@@ -257,34 +237,16 @@ export default function BusinessPage() {
         </div>
       </div>
 
-      {/* Testimonials */}
+      {/* What Businesses Say */}
       <div className="mb-8">
         <h2 className="text-lg font-bold text-white mb-4">
-          Trusted by Local Businesses
+          What Businesses Say
         </h2>
-        <div className="space-y-3">
-          {TESTIMONIALS.map((t) => (
-            <div
-              key={t.author}
-              className="p-4 rounded-xl bg-card border border-zinc-800"
-            >
-              <div className="flex gap-0.5 mb-2">
-                {Array.from({ length: t.stars }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-3.5 h-3.5 text-brand-orange fill-brand-orange"
-                  />
-                ))}
-              </div>
-              <p className="text-sm text-zinc-300 italic mb-2">
-                &ldquo;{t.quote}&rdquo;
-              </p>
-              <p className="text-xs text-zinc-500">
-                <span className="text-zinc-400 font-medium">{t.author}</span>{" "}
-                &middot; {t.role}
-              </p>
-            </div>
-          ))}
+        <div className="p-6 rounded-xl bg-card border border-zinc-800 text-center">
+          <Star className="w-6 h-6 text-zinc-600 mx-auto mb-2" />
+          <p className="text-sm text-zinc-400">
+            Testimonials coming soon — be one of our first business customers!
+          </p>
         </div>
       </div>
 

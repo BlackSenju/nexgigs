@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield, MapPin, Phone, AlertTriangle, MessageSquare, Eye, CheckCircle } from "lucide-react";
+import { Shield, MapPin, Phone, AlertTriangle, MessageSquare, Eye, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 
@@ -58,9 +58,11 @@ export default function SafetyPage() {
           If you&apos;re in immediate danger, call 911. You can also use the panic
           button during any active job.
         </p>
-        <Button variant="danger" className="mt-3">
-          <Phone className="w-4 h-4 mr-1" /> Emergency — Call 911
-        </Button>
+        <a href="tel:911" className="inline-block mt-3">
+          <Button variant="danger">
+            <Phone className="w-4 h-4 mr-1" /> Emergency — Call 911
+          </Button>
+        </a>
       </div>
 
       {/* Safety features */}
@@ -87,9 +89,12 @@ export default function SafetyPage() {
         <p className="text-sm text-zinc-400 mb-3">
           Set up an emergency contact who will be notified if you use the panic button.
         </p>
-        <Button variant="outline" className="w-full">
-          Set Up Emergency Contact
+        <Button variant="outline" className="w-full" disabled>
+          <Clock className="w-4 h-4 mr-1" /> Set Up Emergency Contact — Coming Soon
         </Button>
+        <p className="text-xs text-zinc-500 mt-2 text-center">
+          Emergency contact setup is under development and will be available soon.
+        </p>
       </div>
     </div>
   );
