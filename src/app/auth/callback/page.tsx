@@ -60,7 +60,7 @@ function AuthCallbackInner() {
     const supabase = supabaseRef.current;
     let redirected = false;
 
-    async function ensureProfile(email: string) {
+    async function ensureProfile(email: string): Promise<{ ok: boolean; error?: string }> {
       try {
         const accountType = (sessionStorage.getItem("nexgigs_account_type") as "gigger" | "poster" | null) ?? "gigger";
         sessionStorage.removeItem("nexgigs_account_type");
@@ -73,14 +73,19 @@ function AuthCallbackInner() {
 
         // Call server action which uses the admin client to bypass RLS
         const { ensureOAuthProfile } = await import("@/lib/actions/auth");
-        await ensureOAuthProfile({
+        const result = await ensureOAuthProfile({
           firstName,
           lastInitial,
           accountType,
         });
-      } catch {
-        // Profile creation failed — admin can manually create one,
-        // but redirect anyway so user isn't stuck
+
+        if (result?.error) {
+          return { ok: false, error: result.error };
+        }
+        return { ok: true };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return { ok: false, error: message };
       }
     }
 
@@ -88,7 +93,13 @@ function AuthCallbackInner() {
       if (redirected) return;
       redirected = true;
       // Create profile BEFORE redirecting so it exists when they land
-      await ensureProfile(session.user.email ?? "unknown");
+      const result = await ensureProfile(session.user.email ?? "unknown");
+      if (!result.ok && result.error) {
+        // Surface the error so we can debug instead of silently failing
+        const params = new URLSearchParams({ error: result.error });
+        window.location.replace(`/?${params.toString()}`);
+        return;
+      }
       window.location.replace("/dashboard");
     }
 
