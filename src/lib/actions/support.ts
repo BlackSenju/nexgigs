@@ -103,7 +103,24 @@ export async function getMyPriority() {
   return { priority, responseTime, tier };
 }
 
+// Check if current user is admin
+async function isCurrentUserAdmin(): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("nexgigs_profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+  return data?.is_admin === true;
+}
+
 export async function getAllTickets() {
+  // SECURITY: Admin only
+  const admin = await isCurrentUserAdmin();
+  if (!admin) return [];
+
   const supabase = createClient();
   const { data } = await supabase
     .from("nexgigs_support_tickets")
@@ -115,6 +132,10 @@ export async function getAllTickets() {
 }
 
 export async function respondToTicket(ticketId: string, response: string) {
+  // SECURITY: Admin only
+  const admin = await isCurrentUserAdmin();
+  if (!admin) return { error: "Not authorized" };
+
   const supabase = createClient();
 
   if (!ticketId || !response.trim()) {

@@ -23,6 +23,8 @@ export async function isAdmin(): Promise<boolean> {
  * Get platform stats for admin dashboard.
  */
 export async function getAdminStats() {
+  const admin = await isAdmin();
+  if (!admin) return { totalUsers: 0, totalJobs: 0, activeJobs: 0, completedJobs: 0, totalRevenue: 0, ghostReports: 0 };
   const supabase = createClient();
 
   const [users, jobs, , revenue, ghostReports] = await Promise.all([
@@ -61,6 +63,8 @@ export async function getAdminStats() {
  * Get recent users for admin.
  */
 export async function getAdminUsers(limit = 20) {
+  const admin = await isAdmin();
+  if (!admin) return [];
   const supabase = createClient();
 
   const { data } = await supabase
@@ -80,6 +84,8 @@ export async function getAdminUsers(limit = 20) {
  * Get recent jobs for admin moderation.
  */
 export async function getAdminJobs(limit = 20) {
+  const admin = await isAdmin();
+  if (!admin) return [];
   const supabase = createClient();
 
   const { data } = await supabase
@@ -99,6 +105,8 @@ export async function getAdminJobs(limit = 20) {
  * Get ghost reports for admin review.
  */
 export async function getAdminGhostReports(limit = 20) {
+  const admin = await isAdmin();
+  if (!admin) return [];
   const supabase = createClient();
 
   const { data } = await supabase
@@ -118,6 +126,8 @@ export async function getAdminGhostReports(limit = 20) {
  * Get recent audit log entries.
  */
 export async function getAdminAuditLog(limit = 50) {
+  const admin = await isAdmin();
+  if (!admin) return [];
   const supabase = createClient();
 
   const { data } = await supabase

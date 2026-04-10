@@ -20,6 +20,11 @@ export async function proposeSchedule(input: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // SECURITY: User must be either the gigger or poster
+  if (user.id !== input.giggerId && user.id !== input.posterId) {
+    return { error: "Not authorized" };
+  }
+
   const { data: schedule, error } = await supabase
     .from("nexgigs_job_schedules")
     .insert({
@@ -100,6 +105,16 @@ export async function rescheduleJob(scheduleId: string, newDate: string, newTime
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // SECURITY: User must be party to this schedule
+  const { data: schedule } = await supabase
+    .from("nexgigs_job_schedules")
+    .select("poster_id, gigger_id")
+    .eq("id", scheduleId)
+    .single();
+  if (!schedule || (schedule.poster_id !== user.id && schedule.gigger_id !== user.id)) {
+    return { error: "Not authorized" };
+  }
+
   const { error } = await supabase
     .from("nexgigs_job_schedules")
     .update({
@@ -124,6 +139,16 @@ export async function cancelSchedule(scheduleId: string) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+
+  // SECURITY: User must be party to this schedule
+  const { data: schedule } = await supabase
+    .from("nexgigs_job_schedules")
+    .select("poster_id, gigger_id")
+    .eq("id", scheduleId)
+    .single();
+  if (!schedule || (schedule.poster_id !== user.id && schedule.gigger_id !== user.id)) {
+    return { error: "Not authorized" };
+  }
 
   const { error } = await supabase
     .from("nexgigs_job_schedules")
