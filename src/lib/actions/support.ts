@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNotification } from "@/lib/actions/notifications";
 
 const TIER_PRIORITY: Record<string, string> = {
@@ -103,7 +104,7 @@ export async function getMyPriority() {
   return { priority, responseTime, tier };
 }
 
-// Check if current user is admin
+// Check if current user is admin (uses maybeSingle for safety)
 async function isCurrentUserAdmin(): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -112,7 +113,7 @@ async function isCurrentUserAdmin(): Promise<boolean> {
     .from("nexgigs_profiles")
     .select("is_admin")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
   return data?.is_admin === true;
 }
 
@@ -121,7 +122,8 @@ export async function getAllTickets() {
   const admin = await isCurrentUserAdmin();
   if (!admin) return [];
 
-  const supabase = createClient();
+  // Use admin client to bypass RLS so we can see all tickets
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("nexgigs_support_tickets")
     .select(
@@ -136,7 +138,7 @@ export async function respondToTicket(ticketId: string, response: string) {
   const admin = await isCurrentUserAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   if (!ticketId || !response.trim()) {
     return { error: "Ticket ID and response are required" };

@@ -1,9 +1,11 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Check if current user is admin.
+ * Uses maybeSingle so missing profile rows don't throw.
  */
 export async function isAdmin(): Promise<boolean> {
   const supabase = createClient();
@@ -14,18 +16,19 @@ export async function isAdmin(): Promise<boolean> {
     .from("nexgigs_profiles")
     .select("is_admin")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   return data?.is_admin === true;
 }
 
 /**
  * Get platform stats for admin dashboard.
+ * Uses admin client to bypass RLS so we can see all platform data.
  */
 export async function getAdminStats() {
   const admin = await isAdmin();
   if (!admin) return { totalUsers: 0, totalJobs: 0, activeJobs: 0, completedJobs: 0, totalRevenue: 0, ghostReports: 0 };
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const [users, jobs, , revenue, ghostReports] = await Promise.all([
     supabase.from("nexgigs_profiles").select("id", { count: "exact", head: true }),
@@ -61,11 +64,12 @@ export async function getAdminStats() {
 
 /**
  * Get recent users for admin.
+ * Uses admin client to bypass RLS so admins can see all users.
  */
-export async function getAdminUsers(limit = 20) {
+export async function getAdminUsers(limit = 50) {
   const admin = await isAdmin();
   if (!admin) return [];
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
     .from("nexgigs_profiles")
@@ -83,10 +87,10 @@ export async function getAdminUsers(limit = 20) {
 /**
  * Get recent jobs for admin moderation.
  */
-export async function getAdminJobs(limit = 20) {
+export async function getAdminJobs(limit = 50) {
   const admin = await isAdmin();
   if (!admin) return [];
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
     .from("nexgigs_jobs")
@@ -107,7 +111,7 @@ export async function getAdminJobs(limit = 20) {
 export async function getAdminGhostReports(limit = 20) {
   const admin = await isAdmin();
   if (!admin) return [];
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
     .from("nexgigs_ghost_reports")
@@ -128,7 +132,7 @@ export async function getAdminGhostReports(limit = 20) {
 export async function getAdminAuditLog(limit = 50) {
   const admin = await isAdmin();
   if (!admin) return [];
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
     .from("nexgigs_audit_log")
@@ -149,7 +153,7 @@ export async function adminDeleteJob(jobId: string) {
   const admin = await isAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("nexgigs_jobs")
     .delete()
@@ -165,7 +169,7 @@ export async function adminSuspendUser(userId: string) {
   const admin = await isAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("nexgigs_profiles")
     .update({ verification_tier: "suspended" })
@@ -181,7 +185,7 @@ export async function adminUnsuspendUser(userId: string) {
   const admin = await isAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("nexgigs_profiles")
     .update({ verification_tier: "basic" })
@@ -197,7 +201,7 @@ export async function adminToggleAdmin(userId: string, makeAdmin: boolean) {
   const admin = await isAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("nexgigs_profiles")
     .update({ is_admin: makeAdmin })
@@ -214,7 +218,7 @@ export async function adminSetTier(userId: string, tier: string) {
   const admin = await isAdmin();
   if (!admin) return { error: "Not authorized" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   // First check if the subscriptions table exists by trying a select
   const { error: tableCheck } = await supabase
@@ -249,7 +253,7 @@ export async function adminSetTier(userId: string, tier: string) {
       current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     }, { onConflict: "user_id" })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return { error: `Failed to set tier: ${error.message} (code: ${error.code})` };
@@ -265,7 +269,7 @@ export async function adminGetUserTier(userId: string) {
   const admin = await isAdmin();
   if (!admin) return { tier: "free" };
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("nexgigs_subscriptions")
     .select("tier, status, current_period_end")
@@ -273,7 +277,7 @@ export async function adminGetUserTier(userId: string) {
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   return { tier: data?.tier ?? "free", expiresAt: data?.current_period_end };
 }
