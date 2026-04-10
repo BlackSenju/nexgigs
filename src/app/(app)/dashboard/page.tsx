@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText } from "lucide-react";
+import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -17,11 +17,23 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  const { data: xp } = await supabase
-    .from("nexgigs_user_xp")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: xp }, { data: sub }] = await Promise.all([
+    supabase
+      .from("nexgigs_user_xp")
+      .select("*")
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("nexgigs_subscriptions")
+      .select("tier")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
+
+  const isElite = sub?.tier === "elite";
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4">
@@ -106,6 +118,22 @@ export default async function DashboardPage() {
             <Award className="w-5 h-5 text-brand-orange mb-2" />
             <h3 className="text-sm font-bold text-white">XP Rewards</h3>
             <p className="mt-0.5 text-xs text-zinc-400">Spend your XP on badges & perks</p>
+          </div>
+        </Link>
+        <Link href="/jobs/ai-matches">
+          <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+            <Sparkles className="w-5 h-5 text-brand-orange mb-2" />
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-white">AI Job Matches</h3>
+              {!isElite && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-orange/10 text-brand-orange font-semibold border border-brand-orange/20">
+                  Elite
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              {isElite ? "Personalized job picks for you" : "Upgrade for AI-powered job picks"}
+            </p>
           </div>
         </Link>
         {profile?.is_poster && (
