@@ -96,26 +96,27 @@ export async function signup(input: SignupInput) {
   // work reliably in Next.js server actions because redirect() throws
   // immediately and the function context is destroyed.
   await Promise.all([
-    // Discord + email to admin (NexPaths-style notifyAdmin)
+    // Discord + email to admin
     (async () => {
-      try {
-        const { notifyAdminSync } = await import("@/lib/admin-notify");
-        await notifyAdminSync({
-          eventType: "new_signup",
-          title: `New User: ${displayName}`,
-          description: `${parsed.data.email} just created a NexGigs account.`,
-          metadata: {
-            email: parsed.data.email,
-            name: displayName,
-            accountType: parsed.data.accountType,
-            city: parsed.data.city,
-            state: parsed.data.state.toUpperCase(),
-            provider: "email",
-            userId: newUserId,
-          },
-        });
-      } catch (err) {
-        console.error("[signup] notifyAdmin failed:", err);
+      const result = await notifyAdmin({
+        eventType: "new_signup",
+        title: `New User: ${displayName}`,
+        description: `${parsed.data.email} just created a NexGigs account.`,
+        metadata: {
+          email: parsed.data.email,
+          name: displayName,
+          accountType: parsed.data.accountType,
+          city: parsed.data.city,
+          state: parsed.data.state.toUpperCase(),
+          provider: "email",
+          userId: newUserId,
+        },
+      });
+      if (!result.discord.sent) {
+        console.error("[signup] Discord failed:", result.discord.error);
+      }
+      if (!result.email.sent) {
+        console.error("[signup] Email failed:", result.email.error);
       }
     })(),
     // Welcome email to the user
@@ -211,7 +212,7 @@ export async function ensureOAuthProfile(input: {
 
   // Discord + email admin notification + audit log
   const displayName = `${firstName} ${lastInitial}.`;
-  await Promise.all([
+  const [notifyResult] = await Promise.all([
     notifyAdmin({
       eventType: "new_signup",
       title: `New User: ${displayName}`,
@@ -229,6 +230,13 @@ export async function ensureOAuthProfile(input: {
       provider: "google",
     }).catch(() => null),
   ]);
+
+  if (!notifyResult.discord.sent) {
+    console.error("[ensureOAuthProfile] Discord failed:", notifyResult.discord.error);
+  }
+  if (!notifyResult.email.sent) {
+    console.error("[ensureOAuthProfile] Email failed:", notifyResult.email.error);
+  }
 
   return { success: true };
 }
