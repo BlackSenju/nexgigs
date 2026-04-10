@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles } from "lucide-react";
@@ -6,6 +7,61 @@ import { EarningsTracker } from "@/components/earnings/earnings-tracker";
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import { GettingStartedChecklist } from "@/components/onboarding/getting-started-checklist";
+import { notifyDiscord } from "@/lib/discord";
+
+/**
+ * Self-healing profile creation. If the user is authenticated but has
+ * no profile row (e.g. OAuth signup that didn't complete profile insert),
+ * create one server-side using the admin client. This guarantees that
+ * any user landing on the dashboard always has a profile.
+ */
+async function ensureProfileExists(userId: string, email: string, fullName: string | null) {
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return null; // service role missing — can't auto-heal
+  }
+
+  const nameParts = (fullName ?? "").split(" ").filter(Boolean);
+  const firstName = nameParts[0] || email.split("@")[0] || "User";
+  const lastInitial = (nameParts[1]?.[0] || "X").toUpperCase();
+
+  const { error: insertErr } = await admin
+    .from("nexgigs_profiles")
+    .insert({
+      id: userId,
+      first_name: firstName,
+      last_initial: lastInitial,
+      city: "",
+      state: "",
+      zip_code: "",
+      is_gigger: true,
+      is_poster: true,
+    });
+
+  if (insertErr) return null;
+
+  // Best-effort companion rows + Discord notification
+  await Promise.all([
+    admin.from("nexgigs_user_xp").insert({ user_id: userId }).then(() => null, () => null),
+    admin.from("nexgigs_user_ratings").insert({ user_id: userId }).then(() => null, () => null),
+    notifyDiscord("new_signup", {
+      name: `${firstName} ${lastInitial}.`,
+      accountType: "gigger",
+      city: "",
+      state: "",
+    }).catch(() => null),
+  ]);
+
+  // Re-read the freshly created profile
+  const { data } = await admin
+    .from("nexgigs_profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+  return data;
+}
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -16,11 +72,20 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   // Use maybeSingle so missing rows return null instead of erroring
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("nexgigs_profiles")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Self-heal: if the user has no profile, create one now
+  if (!profile) {
+    profile = await ensureProfileExists(
+      user.id,
+      user.email ?? "unknown",
+      (user.user_metadata?.full_name as string) ?? null
+    );
+  }
 
   const [{ data: xp }, { data: sub }, onboarding] = await Promise.all([
     supabase
