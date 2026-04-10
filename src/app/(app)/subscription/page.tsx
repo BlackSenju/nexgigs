@@ -102,7 +102,7 @@ const BUSINESS_TIERS = [
       { text: "5% service fee (save 29%)", built: true },
       { text: "Unlimited AI features", built: true },
       { text: "Talent pool (save giggers)", built: true },
-      { text: "Invoice generation", built: false },
+      { text: "Invoice generation", built: true },
       { text: "Analytics dashboard", built: true },
       { text: "Priority support", built: false },
     ],

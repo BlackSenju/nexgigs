@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3 } from "lucide-react";
+import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -132,6 +132,15 @@ export default async function DashboardPage() {
               <BarChart3 className="w-5 h-5 text-brand-orange mb-2" />
               <h3 className="text-sm font-bold text-white">Business Analytics</h3>
               <p className="mt-0.5 text-xs text-zinc-400">Track hiring metrics & job performance</p>
+            </div>
+          </Link>
+        )}
+        {profile?.is_poster && (
+          <Link href="/business/invoices">
+            <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+              <FileText className="w-5 h-5 text-brand-orange mb-2" />
+              <h3 className="text-sm font-bold text-white">Invoices</h3>
+              <p className="mt-0.5 text-xs text-zinc-400">Generate invoices for completed jobs</p>
             </div>
           </Link>
         )}
