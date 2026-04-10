@@ -63,7 +63,10 @@ export async function getUnreadCount() {
   return count ?? 0;
 }
 
-/** Helper to send a notification (called from other server actions). */
+/** Helper to send a notification (called from other server actions).
+ * Creates an in-app notification AND sends a web push notification
+ * to all of the user's subscribed devices.
+ */
 export async function sendNotification(input: {
   userId: string;
   type: string;
@@ -72,6 +75,8 @@ export async function sendNotification(input: {
   link?: string;
 }) {
   const supabase = createClient();
+
+  // Create in-app notification
   await supabase.from("nexgigs_notifications").insert({
     user_id: input.userId,
     type: input.type,
@@ -80,4 +85,17 @@ export async function sendNotification(input: {
     link: input.link,
     is_read: false,
   });
+
+  // Fire-and-forget push notification (don't block on failure)
+  try {
+    const { sendPushToUser } = await import("@/lib/actions/push-subscriptions");
+    sendPushToUser(input.userId, {
+      title: input.title,
+      body: input.body,
+      link: input.link,
+      tag: input.type,
+    }).catch(() => {});
+  } catch {
+    // Push not available — in-app notification still created
+  }
 }
