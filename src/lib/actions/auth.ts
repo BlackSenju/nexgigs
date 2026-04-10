@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   signupSchema,
@@ -41,10 +42,14 @@ export async function signup(input: SignupInput) {
 
   const displayName = `${parsed.data.firstName} ${parsed.data.lastInitial.toUpperCase()}.`;
 
-  // Create profile
-  const { error: profileError } = await supabase
+  // Use admin client for profile creation — bypasses RLS since
+  // the new user is not yet authenticated when signup runs
+  const admin = createAdminClient();
+
+  // Create profile (idempotent — upsert in case row already exists)
+  const { error: profileError } = await admin
     .from("nexgigs_profiles")
-    .insert({
+    .upsert({
       id: data.user.id,
       first_name: parsed.data.firstName,
       last_initial: parsed.data.lastInitial.toUpperCase(),
@@ -54,19 +59,23 @@ export async function signup(input: SignupInput) {
       // All new members get full access — can both earn (gigger) and hire (poster)
       is_gigger: true,
       is_poster: true,
-    });
+    }, { onConflict: "id" });
 
   if (profileError) {
+    // Surface the real error so we can debug
     return {
-      error:
-        "Account created but profile setup failed. Please contact support.",
+      error: `Profile setup failed: ${profileError.message}`,
     };
   }
 
-  // Create XP and ratings records (fire-and-forget)
+  // Create XP and ratings records (idempotent — ignore conflicts on existing rows)
   await Promise.all([
-    supabase.from("nexgigs_user_xp").insert({ user_id: data.user.id }),
-    supabase.from("nexgigs_user_ratings").insert({ user_id: data.user.id }),
+    admin
+      .from("nexgigs_user_xp")
+      .upsert({ user_id: data.user.id }, { onConflict: "user_id" }),
+    admin
+      .from("nexgigs_user_ratings")
+      .upsert({ user_id: data.user.id }, { onConflict: "user_id" }),
   ]);
 
   // Fire-and-forget: notifications, email, audit log
