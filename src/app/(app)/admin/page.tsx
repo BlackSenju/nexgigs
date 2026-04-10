@@ -16,7 +16,6 @@ import {
   Trash2,
   Activity,
   Eye,
-  HelpCircle,
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
