@@ -5,7 +5,6 @@ import { Smartphone, Download, CheckCircle, Loader2, Share, Plus } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signupBetaTester } from "@/lib/actions/beta-tester";
-import { cn } from "@/lib/utils";
 
 export function InstallAndBeta() {
   const [isIOS, setIsIOS] = useState(false);
