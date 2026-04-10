@@ -58,14 +58,36 @@ const HOW_IT_WORKS = [
   },
 ];
 
-export default async function LandingPage() {
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: { signup_error?: string };
+}) {
   // Redirect authenticated users to dashboard
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
+
+  const signupError = searchParams.signup_error;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      {/* Signup error banner */}
+      {signupError && (
+        <div className="fixed top-16 left-0 right-0 z-40 mx-auto max-w-2xl px-4 pt-4">
+          <div className="rounded-xl border border-brand-red/30 bg-brand-red/10 p-4">
+            <div className="text-sm font-bold text-brand-red mb-1">
+              Signup Error
+            </div>
+            <div className="text-xs text-zinc-300 break-words">{signupError}</div>
+            <div className="text-[10px] text-zinc-500 mt-2">
+              Please share this error with support so we can fix it.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <section className="pt-32 pb-20 px-4">
