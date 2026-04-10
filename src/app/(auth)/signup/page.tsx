@@ -9,13 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StateSelect } from "@/components/ui/state-select";
 import { CityInput } from "@/components/ui/city-input";
-import { Hammer, Briefcase, ArrowLeft } from "lucide-react";
 import { GoogleButton } from "@/components/ui/google-button";
 import Link from "next/link";
 
 export default function SignupPage() {
-  const [step, setStep] = useState<"choose" | "form">("choose");
-  const [accountType, setAccountType] = useState<"gigger" | "poster">("gigger");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,98 +24,32 @@ export default function SignupPage() {
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { accountType },
+    // Default to "gigger" but auth action marks users as BOTH gigger + poster
+    defaultValues: { accountType: "gigger" },
   });
-
-  function chooseType(type: "gigger" | "poster") {
-    setAccountType(type);
-    setStep("form");
-  }
 
   async function onSubmit(data: SignupInput) {
     setLoading(true);
     setError(null);
-    const result = await signup({ ...data, accountType });
+    // All new members get both gigger + poster access
+    const result = await signup({ ...data, accountType: "gigger" });
     if (result?.error) {
       setError(result.error);
       setLoading(false);
     }
   }
 
-  if (step === "choose") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <Link href="/" className="text-2xl font-black text-brand-orange">
-              NexGigs
-            </Link>
-            <h1 className="mt-6 text-3xl font-black text-white">Join NexGigs</h1>
-            <p className="mt-2 text-zinc-400">How do you want to get started?</p>
-          </div>
-
-          <div className="space-y-4">
-            <button
-              onClick={() => chooseType("gigger")}
-              className="w-full flex items-center gap-4 p-6 rounded-xl border border-zinc-700 bg-card hover:border-brand-orange transition-colors text-left"
-            >
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center">
-                <Hammer className="w-6 h-6 text-brand-orange" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">I want to earn</h3>
-                <p className="text-sm text-zinc-400">
-                  Find gigs in your city and get paid for your skills
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => chooseType("poster")}
-              className="w-full flex items-center gap-4 p-6 rounded-xl border border-zinc-700 bg-card hover:border-brand-orange transition-colors text-left"
-            >
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center">
-                <Briefcase className="w-6 h-6 text-brand-orange" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">I need help</h3>
-                <p className="text-sm text-zinc-400">
-                  Post jobs and hire talented people in your area
-                </p>
-              </div>
-            </button>
-          </div>
-
-          <p className="text-center text-sm text-zinc-500">
-            Already have an account?{" "}
-            <Link href="/login" className="text-brand-orange hover:underline">
-              Log in
-            </Link>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <button
-            onClick={() => setStep("choose")}
-            className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-          <div className="mt-4 text-center">
-            <Link href="/" className="text-2xl font-black text-brand-orange">
-              NexGigs
-            </Link>
-            <h1 className="mt-4 text-2xl font-black text-white">
-              {accountType === "gigger" ? "Start Earning" : "Post Your First Job"}
-            </h1>
-            <p className="mt-1 text-zinc-400">Create your free account</p>
-          </div>
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Link href="/" className="text-2xl font-black text-brand-orange">
+            NexGigs
+          </Link>
+          <h1 className="mt-4 text-2xl font-black text-white">Join NexGigs</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Earn money, hire local help, sell and shop — all in one place
+          </p>
         </div>
 
         {error && (
@@ -199,7 +130,7 @@ export default function SignupPage() {
           <p className="text-[11px] text-zinc-500 leading-relaxed">
             By creating an account, you agree to NexGigs&apos; Terms of Service and Privacy Policy.
             You acknowledge that NexGigs is a marketplace and does not employ or endorse any user.
-            All services are performed by independent contractors.
+            Representing a business? You can set up your company profile after signing up.
           </p>
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
@@ -215,7 +146,7 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <GoogleButton accountType={accountType} label="Sign up with Google" />
+          <GoogleButton accountType="gigger" label="Sign up with Google" />
         </form>
 
         <p className="text-center text-sm text-zinc-500">

@@ -14,7 +14,7 @@ import { SERVICE_CATEGORIES, SKILL_SUGGESTIONS } from "@/lib/constants";
 import {
   Shield, Camera, Plus, Loader2, X, ChevronRight,
   CheckCircle, CreditCard, DollarSign, Award, LogOut,
-  User, Globe, Bell, Lock, Sparkles, HelpCircle,
+  User, Globe, Bell, Lock, Sparkles, HelpCircle, Compass, Building2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -124,6 +124,29 @@ export default function SettingsPage() {
           <p className="text-xs text-zinc-400">{profile.city as string}, {profile.state as string}</p>
         </div>
       </div>
+
+      {/* Business Profile Prompt — only if no business_name */}
+      {!profile.business_name && (
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-5 h-5 text-green-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-white">Representing a Business?</h3>
+              <p className="mt-0.5 text-[11px] text-zinc-400 leading-relaxed">
+                Set up a company profile to unlock business tools like bulk hiring, analytics,
+                talent pool, invoices, and more. Free to set up.
+              </p>
+              <Link href="/business/setup">
+                <Button size="sm" className="mt-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300">
+                  <Building2 className="w-3 h-3 mr-1" /> Set Up Company Profile
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Profile Builder */}
       <div className="p-3 rounded-xl bg-brand-orange/5 border border-brand-orange/20 mb-4 flex items-center justify-between">
@@ -270,6 +293,14 @@ export default function SettingsPage() {
           <Link href="/support" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
             <span className="flex items-center gap-2"><HelpCircle className="w-4 h-4" /> Support</span><ChevronRight className="w-4 h-4" />
           </Link>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("nexgigs:start-tour"))}
+            className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors w-full"
+          >
+            <span className="flex items-center gap-2"><Compass className="w-4 h-4" /> Take the Tour Again</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
           <Link href="/privacy" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
             <span className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> Privacy Policy</span><ChevronRight className="w-4 h-4" />
           </Link>
