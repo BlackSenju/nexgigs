@@ -193,6 +193,20 @@ export default async function DashboardPage() {
             </div>
           </Link>
         )}
+        {profile?.is_poster && (
+          <Link href="/business/bulk-hiring">
+            <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+              <Users className="w-5 h-5 text-brand-orange mb-2" />
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-white">Bulk Hiring</h3>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-orange/10 text-brand-orange font-semibold border border-brand-orange/20">
+                  Enterprise
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-zinc-400">Post multiple jobs & manage applicants in bulk</p>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* How to Earn XP */}

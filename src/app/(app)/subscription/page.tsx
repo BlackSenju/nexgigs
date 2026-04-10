@@ -119,7 +119,7 @@ const BUSINESS_TIERS = [
       { text: "Everything in Growth", built: true },
       { text: "3% service fee (save 57%)", built: true },
       { text: "Dedicated account manager", built: false },
-      { text: "Bulk hiring tools", built: false },
+      { text: "Bulk hiring tools", built: true },
       { text: "Custom branding", built: false },
     ],
   },
