@@ -223,6 +223,41 @@ export async function createJob(input: {
     }),
   ]).catch(() => {});
 
+  // Notify Pro/Elite users with matching skills (fire-and-forget)
+  (async () => {
+    try {
+      const { data: matchingGiggers } = await supabase
+        .from("nexgigs_skills")
+        .select("user_id")
+        .eq("skill_category", input.category);
+
+      if (matchingGiggers && matchingGiggers.length > 0) {
+        const userIds = Array.from(new Set(matchingGiggers.map((s) => s.user_id)));
+        const { data: proUsers } = await supabase
+          .from("nexgigs_subscriptions")
+          .select("user_id")
+          .in("user_id", userIds)
+          .eq("status", "active")
+          .in("tier", ["pro", "elite"]);
+
+        const toNotify = (proUsers ?? []).slice(0, 20);
+        for (const proUser of toNotify) {
+          if (proUser.user_id !== user.id) {
+            sendNotification({
+              userId: proUser.user_id,
+              type: "application",
+              title: "New job matches your skills!",
+              body: `"${input.title}" in ${input.category} was just posted in ${input.city}`,
+              link: `/jobs/${job.id}`,
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch {
+      // Silent failure — alerts are best-effort
+    }
+  })();
+
   return { job };
 }
 

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award } from "lucide-react";
+import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -108,6 +108,15 @@ export default async function DashboardPage() {
             <p className="mt-0.5 text-xs text-zinc-400">Spend your XP on badges & perks</p>
           </div>
         </Link>
+        {profile?.is_poster && (
+          <Link href="/gigs/applicants">
+            <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-brand-orange/50 transition-colors cursor-pointer">
+              <Users className="w-5 h-5 text-brand-orange mb-2" />
+              <h3 className="text-sm font-bold text-white">Manage Applicants</h3>
+              <p className="mt-0.5 text-xs text-zinc-400">Review applications for your jobs</p>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* How to Earn XP */}

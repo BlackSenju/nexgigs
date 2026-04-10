@@ -14,6 +14,9 @@ import {
   CheckCircle,
   Image as ImageIcon,
   Loader2,
+  Crown,
+  Rocket,
+  Building2,
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -25,6 +28,7 @@ export default function PublicProfilePage() {
   const [userRating, setUserRating] = useState<Record<string, unknown> | null>(null);
   const [userXp, setUserXp] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userTier, setUserTier] = useState("free");
 
   useEffect(() => {
     async function fetchProfile() {
@@ -54,6 +58,17 @@ export default function PublicProfilePage() {
       setUserRating(ratingData);
       setUserXp(xpData);
       setRatings(reviewsData ?? []);
+
+      // Fetch subscription tier
+      const { data: sub } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("tier")
+        .eq("user_id", id as string)
+        .eq("status", "active")
+        .limit(1)
+        .single();
+      if (sub?.tier) setUserTier(sub.tier);
+
       setLoading(false);
     }
     if (id) fetchProfile();
@@ -93,6 +108,9 @@ export default function PublicProfilePage() {
               {profile.first_name as string} {profile.last_initial as string}.
             </h1>
             {Boolean(profile.identity_verified) && <Shield className="w-4 h-4 text-brand-orange" />}
+            {userTier === "pro" && <span title="Pro Gigger"><Crown className="w-3.5 h-3.5 text-blue-400" /></span>}
+            {userTier === "elite" && <span title="Elite Gigger"><Rocket className="w-3.5 h-3.5 text-purple-400" /></span>}
+            {(userTier === "business_starter" || userTier === "business_growth" || userTier === "enterprise") && <span title="Business"><Building2 className="w-3.5 h-3.5 text-green-400" /></span>}
           </div>
           <div className="flex items-center gap-1 text-sm text-zinc-400 mt-0.5">
             <MapPin className="w-3.5 h-3.5" />
@@ -160,6 +178,21 @@ export default function PublicProfilePage() {
         <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-900/30 text-xs text-purple-400">
           <Award className="w-3 h-3" /> {String(userXp?.level_title ?? "Task Starter")}
         </span>
+        {userTier === "pro" && (
+          <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-900/30 text-xs text-blue-400">
+            <Crown className="w-3 h-3" /> Pro Gigger
+          </span>
+        )}
+        {userTier === "elite" && (
+          <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-900/30 text-xs text-purple-400">
+            <Rocket className="w-3 h-3" /> Elite Gigger
+          </span>
+        )}
+        {(userTier === "business_starter" || userTier === "business_growth" || userTier === "enterprise") && (
+          <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-900/30 text-xs text-green-400">
+            <Building2 className="w-3 h-3" /> Business
+          </span>
+        )}
       </div>
 
       {/* Skills */}
