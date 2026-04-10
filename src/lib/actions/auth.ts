@@ -111,6 +111,81 @@ export async function signup(input: SignupInput) {
   redirect("/dashboard");
 }
 
+/**
+ * Create or upsert the profile for an OAuth (Google) signup.
+ * Called from the OAuth callback page after exchangeCodeForSession.
+ *
+ * Uses the admin client to bypass RLS and verifies the requesting user
+ * matches the userId being created so randos can't create profiles for
+ * other people.
+ */
+export async function ensureOAuthProfile(input: {
+  firstName: string;
+  lastInitial: string;
+  accountType?: "gigger" | "poster";
+}) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const admin = createAdminClient();
+
+  // Check if profile already exists
+  const { data: existing } = await admin
+    .from("nexgigs_profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: true, alreadyExists: true };
+  }
+
+  const firstName = input.firstName?.trim() || (user.email?.split("@")[0] ?? "User");
+  const lastInitial = (input.lastInitial?.trim() || "X").charAt(0).toUpperCase();
+
+  // Create profile
+  const { error: profileError } = await admin
+    .from("nexgigs_profiles")
+    .insert({
+      id: user.id,
+      first_name: firstName,
+      last_initial: lastInitial,
+      city: "",
+      state: "",
+      zip_code: "",
+      is_gigger: true,
+      is_poster: true,
+    });
+
+  if (profileError) {
+    return { error: `Profile creation failed: ${profileError.message}` };
+  }
+
+  // Create XP and ratings rows (best-effort)
+  await Promise.all([
+    admin.from("nexgigs_user_xp").insert({ user_id: user.id }).then(() => null, () => null),
+    admin.from("nexgigs_user_ratings").insert({ user_id: user.id }).then(() => null, () => null),
+  ]);
+
+  // Discord notification + audit log (await so they fire before client redirects away)
+  const displayName = `${firstName} ${lastInitial}.`;
+  await Promise.all([
+    notifyDiscord("new_signup", {
+      name: displayName,
+      accountType: input.accountType ?? "gigger",
+      city: "",
+      state: "",
+    }).catch(() => null),
+    logAuditEvent(user.id, "auth.signup", "user", user.id, {
+      accountType: input.accountType ?? "gigger",
+      provider: "google",
+    }).catch(() => null),
+  ]);
+
+  return { success: true };
+}
+
 export async function login(input: LoginInput) {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) {

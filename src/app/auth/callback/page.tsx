@@ -60,45 +60,35 @@ function AuthCallbackInner() {
     const supabase = supabaseRef.current;
     let redirected = false;
 
-    async function ensureProfileInBackground(userId: string, email: string) {
+    async function ensureProfile(email: string) {
       try {
-        const { data: existing } = await supabase
-          .from("nexgigs_profiles")
-          .select("id")
-          .eq("id", userId)
-          .maybeSingle();
-        if (existing) return;
-
-        const accountType = sessionStorage.getItem("nexgigs_account_type") ?? "gigger";
+        const accountType = (sessionStorage.getItem("nexgigs_account_type") as "gigger" | "poster" | null) ?? "gigger";
         sessionStorage.removeItem("nexgigs_account_type");
+
         const { data: { user } } = await supabase.auth.getUser();
         const fullName = user?.user_metadata?.full_name ?? "";
-        const nameParts = fullName.split(" ");
+        const nameParts = fullName.split(" ").filter(Boolean);
         const firstName = nameParts[0] || email.split("@")[0] || "User";
         const lastInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : "X";
 
-        await supabase.from("nexgigs_profiles").insert({
-          id: userId, first_name: firstName, last_initial: lastInitial.toUpperCase(),
-          city: "", state: "", zip_code: "",
-          // All new members get full access — both gigger and poster flags true
-          is_gigger: true, is_poster: true,
+        // Call server action which uses the admin client to bypass RLS
+        const { ensureOAuthProfile } = await import("@/lib/actions/auth");
+        await ensureOAuthProfile({
+          firstName,
+          lastInitial,
+          accountType,
         });
-        await Promise.all([
-          supabase.from("nexgigs_user_xp").insert({ user_id: userId }),
-          supabase.from("nexgigs_user_ratings").insert({ user_id: userId }),
-        ]);
-        fetch("/api/auth/notify-signup", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, email, name: firstName + " " + lastInitial + ".", accountType, provider: "google" }),
-        }).catch(() => {});
-      } catch {}
+      } catch {
+        // Profile creation failed — admin can manually create one,
+        // but redirect anyway so user isn't stuck
+      }
     }
 
     async function handleSession(session: { user: { id: string; email?: string } }) {
       if (redirected) return;
       redirected = true;
       // Create profile BEFORE redirecting so it exists when they land
-      await ensureProfileInBackground(session.user.id, session.user.email ?? "unknown");
+      await ensureProfile(session.user.email ?? "unknown");
       window.location.replace("/dashboard");
     }
 
