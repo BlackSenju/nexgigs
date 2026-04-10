@@ -10,6 +10,7 @@ import {
   type LoginInput,
 } from "@/lib/validations/auth";
 import { notifyDiscord } from "@/lib/discord";
+import { notifyAdmin } from "@/lib/admin-notify";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { logAuditEvent } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -87,16 +88,37 @@ export async function signup(input: SignupInput) {
       .then(() => null, () => null),
   ]);
 
-  // AWAIT notifications BEFORE redirect — fire-and-forget doesn't work
-  // reliably in Next.js server actions because redirect() throws
-  // immediately and the function context is destroyed
+  // Capture the user id for closures below (TypeScript narrows lose
+  // through IIFE boundaries)
+  const newUserId = data.user.id;
+
+  // AWAIT admin notifications BEFORE redirect — fire-and-forget doesn't
+  // work reliably in Next.js server actions because redirect() throws
+  // immediately and the function context is destroyed.
   await Promise.all([
-    notifyDiscord("new_signup", {
-      name: displayName,
-      accountType: parsed.data.accountType,
-      city: parsed.data.city,
-      state: parsed.data.state.toUpperCase(),
-    }).catch(() => null),
+    // Discord + email to admin (NexPaths-style notifyAdmin)
+    (async () => {
+      try {
+        const { notifyAdminSync } = await import("@/lib/admin-notify");
+        await notifyAdminSync({
+          eventType: "new_signup",
+          title: `New User: ${displayName}`,
+          description: `${parsed.data.email} just created a NexGigs account.`,
+          metadata: {
+            email: parsed.data.email,
+            name: displayName,
+            accountType: parsed.data.accountType,
+            city: parsed.data.city,
+            state: parsed.data.state.toUpperCase(),
+            provider: "email",
+            userId: newUserId,
+          },
+        });
+      } catch (err) {
+        console.error("[signup] notifyAdmin failed:", err);
+      }
+    })(),
+    // Welcome email to the user
     (async () => {
       try {
         const email = welcomeEmail(
@@ -108,7 +130,7 @@ export async function signup(input: SignupInput) {
         // Email failure shouldn't block signup
       }
     })(),
-    logAuditEvent(data.user.id, "auth.signup", "user", data.user.id, {
+    logAuditEvent(newUserId, "auth.signup", "user", newUserId, {
       accountType: parsed.data.accountType,
       city: parsed.data.city,
       state: parsed.data.state,
@@ -187,15 +209,21 @@ export async function ensureOAuthProfile(input: {
     admin.from("nexgigs_user_ratings").insert({ user_id: user.id }).then(() => null, () => null),
   ]);
 
-  // Discord notification + audit log (await so they fire before client redirects away)
+  // Discord + email admin notification + audit log
   const displayName = `${firstName} ${lastInitial}.`;
   await Promise.all([
-    notifyDiscord("new_signup", {
-      name: displayName,
-      accountType: input.accountType ?? "gigger",
-      city: "",
-      state: "",
-    }).catch(() => null),
+    notifyAdmin({
+      eventType: "new_signup",
+      title: `New User: ${displayName}`,
+      description: `${user.email} just created a NexGigs account via Google.`,
+      metadata: {
+        email: user.email ?? "",
+        name: displayName,
+        accountType: input.accountType ?? "gigger",
+        provider: "google",
+        userId: user.id,
+      },
+    }),
     logAuditEvent(user.id, "auth.signup", "user", user.id, {
       accountType: input.accountType ?? "gigger",
       provider: "google",

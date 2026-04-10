@@ -7,7 +7,7 @@ import { EarningsTracker } from "@/components/earnings/earnings-tracker";
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import { GettingStartedChecklist } from "@/components/onboarding/getting-started-checklist";
-import { notifyDiscord } from "@/lib/discord";
+import { notifyAdmin } from "@/lib/admin-notify";
 
 /**
  * Self-healing profile creation. If the user is authenticated but has
@@ -42,17 +42,26 @@ async function ensureProfileExists(userId: string, email: string, fullName: stri
 
   if (insertErr) return null;
 
-  // Best-effort companion rows + Discord notification
+  // Best-effort companion rows + admin notification
+  const displayName = `${firstName} ${lastInitial}.`;
   await Promise.all([
     admin.from("nexgigs_user_xp").insert({ user_id: userId }).then(() => null, () => null),
     admin.from("nexgigs_user_ratings").insert({ user_id: userId }).then(() => null, () => null),
-    notifyDiscord("new_signup", {
-      name: `${firstName} ${lastInitial}.`,
-      accountType: "gigger",
-      city: "",
-      state: "",
-    }).catch(() => null),
   ]);
+
+  // Fire admin notification (Discord + email)
+  notifyAdmin({
+    eventType: "new_signup",
+    title: `New User: ${displayName}`,
+    description: `${email} just created a NexGigs account.`,
+    metadata: {
+      email,
+      name: displayName,
+      accountType: "gigger",
+      provider: "google",
+      userId,
+    },
+  });
 
   // Re-read the freshly created profile
   const { data } = await admin
