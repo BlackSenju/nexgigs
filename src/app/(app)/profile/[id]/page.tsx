@@ -17,6 +17,7 @@ import {
   Crown,
   Rocket,
   Building2,
+  Bookmark,
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -29,6 +30,10 @@ export default function PublicProfilePage() {
   const [userXp, setUserXp] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [userTier, setUserTier] = useState("free");
+  const [viewerTier, setViewerTier] = useState("free");
+  const [isInPool, setIsInPool] = useState(false);
+  const [poolLoading, setPoolLoading] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -69,6 +74,31 @@ export default function PublicProfilePage() {
         .single();
       if (sub?.tier) setUserTier(sub.tier);
 
+      // Check viewer's subscription and talent pool status
+      const { data: { user: viewer } } = await supabase.auth.getUser();
+      if (viewer && viewer.id !== id) {
+        setViewerId(viewer.id);
+        const { data: viewerSub } = await supabase
+          .from("nexgigs_subscriptions")
+          .select("tier")
+          .eq("user_id", viewer.id)
+          .eq("status", "active")
+          .limit(1)
+          .single();
+        const vTier = viewerSub?.tier ?? "free";
+        setViewerTier(vTier);
+
+        if (["business_growth", "enterprise"].includes(vTier)) {
+          const { data: poolEntry } = await supabase
+            .from("nexgigs_talent_pool")
+            .select("id")
+            .eq("business_user_id", viewer.id)
+            .eq("gigger_id", id as string)
+            .maybeSingle();
+          setIsInPool(!!poolEntry);
+        }
+      }
+
       setLoading(false);
     }
     if (id) fetchProfile();
@@ -89,6 +119,31 @@ export default function PublicProfilePage() {
       </div>
     );
   }
+
+  async function handleTalentPoolToggle() {
+    if (!viewerId || !id) return;
+    setPoolLoading(true);
+    const supabase = createClient();
+    if (isInPool) {
+      const { error } = await supabase
+        .from("nexgigs_talent_pool")
+        .delete()
+        .eq("business_user_id", viewerId)
+        .eq("gigger_id", id as string);
+      if (!error) setIsInPool(false);
+    } else {
+      const { error } = await supabase
+        .from("nexgigs_talent_pool")
+        .upsert(
+          { business_user_id: viewerId, gigger_id: id as string, tags: [] },
+          { onConflict: "business_user_id,gigger_id" }
+        );
+      if (!error) setIsInPool(true);
+    }
+    setPoolLoading(false);
+  }
+
+  const showTalentPoolBtn = viewerId && ["business_growth", "enterprise"].includes(viewerTier);
 
   const avgRating = Number(userRating?.average_rating ?? 0);
   const totalRatings = Number(userRating?.total_ratings ?? 0);
@@ -134,6 +189,21 @@ export default function PublicProfilePage() {
       <div className="flex gap-3 mt-4">
         <Button className="flex-1"><MessageSquare className="w-4 h-4 mr-1" /> Message</Button>
         <Button variant="outline" className="flex-1">Hire Directly</Button>
+        {showTalentPoolBtn && (
+          <Button
+            variant={isInPool ? "secondary" : "outline"}
+            className="px-3"
+            onClick={handleTalentPoolToggle}
+            disabled={poolLoading}
+            title={isInPool ? "Saved to Talent Pool" : "Save to Talent Pool"}
+          >
+            {poolLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Bookmark className={`w-4 h-4 ${isInPool ? "fill-current text-brand-orange" : ""}`} />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Bio */}
