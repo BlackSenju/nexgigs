@@ -103,7 +103,7 @@ const BUSINESS_TIERS = [
       { text: "Unlimited AI features", built: true },
       { text: "Talent pool (save giggers)", built: true },
       { text: "Invoice generation", built: false },
-      { text: "Analytics dashboard", built: false },
+      { text: "Analytics dashboard", built: true },
       { text: "Priority support", built: false },
     ],
   },
