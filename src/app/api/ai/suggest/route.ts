@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { improveJobDescription, professionalRewrite, suggestPricing, suggestReply } from "@/lib/ai";
+import { buildProfile, improveJobDescription, professionalRewrite, suggestPricing, suggestReply } from "@/lib/ai";
 import { moderateContent } from "@/lib/moderation";
 import { checkAIUsage, recordAIUsage } from "@/lib/actions/ai-usage";
 
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     matching: "matching",
     pricing: "tips",
     reply: "tips",
+    profile_builder: "tips",
   };
   const feature = featureMap[type];
 
@@ -142,6 +143,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(result);
       } catch {
         return NextResponse.json({ error: "Pricing AI unavailable. Try again later." }, { status: 500 });
+      }
+    }
+
+    if (type === "profile_builder") {
+      try {
+        const result = await buildProfile({
+          name: body.name || "",
+          skills: body.skills || [],
+          experience: body.experience || "",
+          city: body.city || "",
+          isGigger: body.isGigger ?? true,
+          isPoster: body.isPoster ?? false,
+        });
+        await recordAIUsage("tips");
+        return NextResponse.json(result);
+      } catch {
+        return NextResponse.json({ error: "Profile builder unavailable" }, { status: 500 });
       }
     }
 
