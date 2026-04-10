@@ -70,12 +70,27 @@ export async function acceptApplication(applicationId: string, jobId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
+  // SECURITY: Verify user is the poster of this job
+  const { data: jobCheck } = await supabase
+    .from("nexgigs_jobs")
+    .select("poster_id")
+    .eq("id", jobId)
+    .single();
+  if (!jobCheck || jobCheck.poster_id !== user.id) {
+    return { error: "Not authorized" };
+  }
+
   // Fetch application details for notification
   const { data: application } = await supabase
     .from("nexgigs_applications")
-    .select("gigger_id")
+    .select("gigger_id, job_id")
     .eq("id", applicationId)
     .single();
+
+  // SECURITY: Verify the application belongs to this job
+  if (!application || application.job_id !== jobId) {
+    return { error: "Invalid application" };
+  }
 
   // Update application status
   const { error } = await supabase
@@ -131,6 +146,19 @@ export async function rejectApplication(applicationId: string) {
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated" };
+
+  // SECURITY: Verify user is the poster of the job this application is for
+  const { data: app } = await supabase
+    .from("nexgigs_applications")
+    .select("job_id, job:nexgigs_jobs!job_id(poster_id)")
+    .eq("id", applicationId)
+    .single();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const job = app?.job as any;
+  if (!job || job.poster_id !== user.id) {
+    return { error: "Not authorized" };
+  }
 
   const { error } = await supabase
     .from("nexgigs_applications")

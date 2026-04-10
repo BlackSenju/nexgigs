@@ -232,7 +232,10 @@ export default async function LandingPage() {
           <div className="text-sm text-zinc-500">
             &copy; {new Date().getFullYear()} NexGigs. Your city. Your skill. Your money.
           </div>
-          <div className="flex items-center gap-6 text-sm text-zinc-500">
+          <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-500 justify-center sm:justify-end">
+            <Link href="/contact" className="hover:text-white transition-colors">
+              Contact
+            </Link>
             <Link href="/how-it-works" className="hover:text-white transition-colors">
               How It Works
             </Link>
@@ -242,6 +245,13 @@ export default async function LandingPage() {
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl mt-6 pt-4 border-t border-zinc-800/50">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-600 justify-center sm:justify-start">
+            <a href="tel:+14144360807" className="hover:text-white transition-colors">📞 +1 (414) 436-0807</a>
+            <a href="mailto:support@nexgigs.com" className="hover:text-white transition-colors">✉️ support@nexgigs.com</a>
+            <span>📍 Milwaukee, WI</span>
           </div>
           <p className="text-xs text-zinc-600 mt-4 max-w-xl mx-auto text-center leading-relaxed sm:text-left">
             NexGigs is a marketplace that connects people seeking services with independent service providers. NexGigs does not employ, recommend, or endorse any service provider and is not responsible for any service provider&apos;s actions, conduct, or work product. Users hire service providers at their own risk. All payments processed securely through Stripe. Operated by NexGigs, Milwaukee, WI.
