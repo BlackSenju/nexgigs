@@ -122,13 +122,10 @@ export async function signup(input: SignupInput) {
     // Welcome email to the user
     (async () => {
       try {
-        const email = welcomeEmail(
-          parsed.data.firstName,
-          parsed.data.accountType
-        );
+        const email = welcomeEmail(parsed.data.firstName);
         await sendEmail(parsed.data.email, email.subject, email.html);
-      } catch {
-        // Email failure shouldn't block signup
+      } catch (err) {
+        console.error("[signup] Welcome email failed:", err);
       }
     })(),
     logAuditEvent(newUserId, "auth.signup", "user", newUserId, {
@@ -210,7 +207,7 @@ export async function ensureOAuthProfile(input: {
     admin.from("nexgigs_user_ratings").insert({ user_id: user.id }).then(() => null, () => null),
   ]);
 
-  // Discord + email admin notification + audit log
+  // Discord + email admin notification + welcome email + audit log
   const displayName = `${firstName} ${lastInitial}.`;
   const [notifyResult] = await Promise.all([
     notifyAdmin({
@@ -225,6 +222,16 @@ export async function ensureOAuthProfile(input: {
         userId: user.id,
       },
     }),
+    // Welcome email to the new user
+    (async () => {
+      if (!user.email) return;
+      try {
+        const email = welcomeEmail(firstName);
+        await sendEmail(user.email, email.subject, email.html);
+      } catch (err) {
+        console.error("[ensureOAuthProfile] Welcome email failed:", err);
+      }
+    })(),
     logAuditEvent(user.id, "auth.signup", "user", user.id, {
       accountType: input.accountType ?? "gigger",
       provider: "google",

@@ -1,8 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logAuditEvent } from "@/lib/audit";
 import { moderateMessage } from "@/lib/moderation";
+import { sendEmail, newMessageEmail } from "@/lib/email";
 
 /**
  * Get all conversations for the current user.
@@ -148,7 +150,81 @@ export async function sendMessage(conversationId: string, content: string) {
     })
     .eq("id", conversationId);
 
+  // Email notification to the recipient — fire-and-forget async so it
+  // doesn't slow down the send. Awaited inside the IIFE so it doesn't
+  // get killed by Vercel's function lifecycle.
+  const recipientId = isP1 ? convo.participant_2_id : convo.participant_1_id;
+  sendNewMessageEmail({
+    senderUserId: user.id,
+    recipientUserId: recipientId,
+    conversationId,
+    messagePreview: content.trim(),
+  }).catch((err) => console.error("[sendMessage] Email failed:", err));
+
   return { message: messageWithWarnings };
+}
+
+/**
+ * Helper: send the "new message" email if the recipient hasn't sent a
+ * message in this conversation in the last 2 hours (proxy for "they're
+ * not actively looking at the app"). Uses the admin client to read the
+ * recipient's email from auth.users.
+ */
+async function sendNewMessageEmail(input: {
+  senderUserId: string;
+  recipientUserId: string;
+  conversationId: string;
+  messagePreview: string;
+}): Promise<void> {
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return;
+  }
+
+  // Check if recipient has sent a message in this convo in the last 2 hours.
+  // If they have, they're actively engaged — skip the email.
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: recentFromRecipient } = await admin
+    .from("nexgigs_messages")
+    .select("id")
+    .eq("conversation_id", input.conversationId)
+    .eq("sender_id", input.recipientUserId)
+    .gte("created_at", twoHoursAgo)
+    .limit(1);
+
+  if (recentFromRecipient && recentFromRecipient.length > 0) {
+    return; // Recipient is active — no email needed
+  }
+
+  // Fetch recipient's email + name + sender's name
+  const [recipientAuth, recipientProfile, senderProfile] = await Promise.all([
+    admin.auth.admin.getUserById(input.recipientUserId),
+    admin
+      .from("nexgigs_profiles")
+      .select("first_name")
+      .eq("id", input.recipientUserId)
+      .maybeSingle(),
+    admin
+      .from("nexgigs_profiles")
+      .select("first_name, last_initial")
+      .eq("id", input.senderUserId)
+      .maybeSingle(),
+  ]);
+
+  const recipientEmail = recipientAuth?.data?.user?.email;
+  if (!recipientEmail) return;
+
+  const email = newMessageEmail({
+    recipientFirstName: recipientProfile.data?.first_name ?? "there",
+    senderFirstName: senderProfile.data?.first_name ?? "Someone",
+    senderLastInitial: senderProfile.data?.last_initial ?? "X",
+    messagePreview: input.messagePreview,
+    conversationId: input.conversationId,
+  });
+
+  await sendEmail(recipientEmail, email.subject, email.html);
 }
 
 /**
