@@ -8,7 +8,11 @@ function getResend(): Resend {
   return _resend;
 }
 
-const FROM_EMAIL = "NexGigs <notifications@nexgigs.com>";
+// Configurable sender. Set EMAIL_FROM in Vercel once nexgigs.com is verified
+// in Resend (https://resend.com/domains). Until then, fall back to Resend's
+// default test sender so transactional emails still go out.
+const FROM_EMAIL =
+  process.env.EMAIL_FROM ?? "NexGigs <onboarding@resend.dev>";
 
 interface EmailResult {
   success: boolean;
