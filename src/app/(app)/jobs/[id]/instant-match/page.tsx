@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,6 @@ const MATCH_TYPE_CONFIG = {
 
 export default function InstantMatchPage() {
   const { id } = useParams();
-  const router = useRouter();
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
