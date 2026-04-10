@@ -1,8 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logAuditEvent } from "@/lib/audit";
 import { sendNotification } from "@/lib/actions/notifications";
+import { sendEmail, hiredEmail } from "@/lib/email";
 
 /**
  * Get all applications for a specific job (poster only).
@@ -116,21 +118,59 @@ export async function acceptApplication(applicationId: string, jobId: string) {
 
   await logAuditEvent(user.id, "job.hired", "application", applicationId, { jobId });
 
-  // Notify the hired gigger
+  // Notify the hired gigger (in-app + email)
   if (application?.gigger_id) {
     const { data: job } = await supabase
       .from("nexgigs_jobs")
-      .select("title")
+      .select("title, price")
       .eq("id", jobId)
       .single();
 
-    sendNotification({
-      userId: application.gigger_id,
-      type: "hired",
-      title: "You've been hired!",
-      body: `You've been hired for "${job?.title ?? "a gig"}"`,
-      link: "/gigs",
-    }).catch(() => {});
+    await Promise.all([
+      sendNotification({
+        userId: application.gigger_id,
+        type: "hired",
+        title: "You've been hired!",
+        body: `You've been hired for "${job?.title ?? "a gig"}"`,
+        link: "/gigs",
+      }).catch((err) => console.error("[acceptApplication] Notification failed:", err)),
+
+      // Hired confirmation email
+      (async () => {
+        try {
+          const admin = createAdminClient();
+
+          const [giggerAuth, giggerProfile, posterProfile] = await Promise.all([
+            admin.auth.admin.getUserById(application.gigger_id),
+            admin
+              .from("nexgigs_profiles")
+              .select("first_name")
+              .eq("id", application.gigger_id)
+              .maybeSingle(),
+            admin
+              .from("nexgigs_profiles")
+              .select("first_name")
+              .eq("id", user.id)
+              .maybeSingle(),
+          ]);
+
+          const giggerEmail = giggerAuth?.data?.user?.email;
+          if (!giggerEmail) return;
+
+          const email = hiredEmail({
+            giggerFirstName: giggerProfile.data?.first_name ?? "there",
+            jobTitle: job?.title ?? "the job",
+            jobId,
+            posterFirstName: posterProfile.data?.first_name ?? "the poster",
+            agreedPrice: job?.price ?? null,
+          });
+
+          await sendEmail(giggerEmail, email.subject, email.html);
+        } catch (err) {
+          console.error("[acceptApplication] Hired email failed:", err);
+        }
+      })(),
+    ]);
   }
 
   return { success: true };

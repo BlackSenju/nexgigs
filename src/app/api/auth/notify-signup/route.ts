@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
       }),
       (() => {
         const welcomeData = welcomeEmail(
-          name?.split(" ")[0] ?? "there",
-          accountType ?? "gigger"
+          (name?.split(" ")[0] as string | undefined) ?? "there"
         );
         return sendEmail(email, welcomeData.subject, welcomeData.html);
       })(),

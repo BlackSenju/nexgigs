@@ -8,6 +8,7 @@ import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import { GettingStartedChecklist } from "@/components/onboarding/getting-started-checklist";
 import { notifyAdmin } from "@/lib/admin-notify";
+import { sendEmail, welcomeEmail } from "@/lib/email";
 
 /**
  * Self-healing profile creation. If the user is authenticated but has
@@ -69,6 +70,14 @@ async function ensureProfileExists(userId: string, email: string, fullName: stri
   }
   if (!notifyResult.email.sent) {
     console.error("[dashboard self-heal] Email failed:", notifyResult.email.error);
+  }
+
+  // Welcome email to the new user
+  try {
+    const welcome = welcomeEmail(firstName);
+    await sendEmail(email, welcome.subject, welcome.html);
+  } catch (err) {
+    console.error("[dashboard self-heal] Welcome email failed:", err);
   }
 
   // Re-read the freshly created profile

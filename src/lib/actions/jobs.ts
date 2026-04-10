@@ -7,6 +7,8 @@ import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
 import { sendNotification } from "@/lib/actions/notifications";
+import { sendEmail, newApplicationEmail, jobPostedEmail } from "@/lib/email";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function getJobs(filters?: {
   category?: string;
@@ -207,8 +209,8 @@ export async function createJob(input: {
   const displayPrice =
     input.price ?? input.priceMin ?? input.hourlyRate ?? "open";
 
-  // Fire-and-forget notifications
-  Promise.all([
+  // AWAIT Discord + audit log + job posted confirmation email
+  await Promise.all([
     notifyDiscord("job_posted", {
       title: input.title,
       category: input.category,
@@ -216,12 +218,28 @@ export async function createJob(input: {
       city: input.city,
       state: input.state,
       poster: `${profile?.first_name ?? "Unknown"} ${profile?.last_initial ?? ""}.`,
-    }),
+    }).catch((err) => console.error("[createJob] Discord failed:", err)),
     logAuditEvent(user.id, "job.created", "job", job.id, {
       title: input.title,
       category: input.category,
-    }),
-  ]).catch(() => {});
+    }).catch(() => null),
+    // Email confirmation to the poster
+    (async () => {
+      if (!user.email) return;
+      try {
+        const email = jobPostedEmail({
+          posterFirstName: profile?.first_name ?? "there",
+          jobTitle: input.title,
+          jobCategory: input.category,
+          jobId: job.id,
+          price: input.price ?? input.priceMin ?? input.hourlyRate ?? null,
+        });
+        await sendEmail(user.email, email.subject, email.html);
+      } catch (err) {
+        console.error("[createJob] Job posted email failed:", err);
+      }
+    })(),
+  ]);
 
   // Notify Pro/Elite users with matching skills (fire-and-forget)
   (async () => {
@@ -297,32 +315,111 @@ export async function applyToJob(
     return { error: error.message };
   }
 
-  // Increment application count
-  // Atomic application count increment (no race condition)
+  // Increment application count (atomic, no race condition)
   await supabase.rpc("increment_applications", { job_id_input: jobId });
 
-  // Fire-and-forget
-  Promise.all([
+  // AWAIT Discord + in-app notification + email — fire-and-forget doesn't
+  // work reliably on Vercel (pending promises killed when function returns)
+  await Promise.all([
     notifyDiscord("job_applied", {
       gigger: `${profile?.first_name ?? "Unknown"} ${profile?.last_initial ?? ""}.`,
       jobTitle: job?.title ?? "Unknown",
       bidAmount: bidAmount ?? 0,
-    }),
-    logAuditEvent(user.id, "job.applied", "job", jobId),
-  ]).catch(() => {});
-
-  // Notify the job poster about the new application
-  if (job?.poster_id) {
-    sendNotification({
-      userId: job.poster_id,
-      type: "application",
-      title: "New application!",
-      body: `${profile?.first_name ?? "Someone"} applied to "${job.title}" with a bid of $${bidAmount ?? "open"}`,
-      link: `/jobs/${jobId}`,
-    }).catch(() => {});
-  }
+    }).catch((err) => console.error("[applyToJob] Discord failed:", err)),
+    logAuditEvent(user.id, "job.applied", "job", jobId).catch(() => null),
+    // In-app notification to poster
+    job?.poster_id
+      ? sendNotification({
+          userId: job.poster_id,
+          type: "application",
+          title: "New application!",
+          body: `${profile?.first_name ?? "Someone"} applied to "${job.title}" with a bid of $${bidAmount ?? "open"}`,
+          link: `/jobs/${jobId}`,
+        }).catch((err) => console.error("[applyToJob] sendNotification failed:", err))
+      : Promise.resolve(),
+    // Email notification to poster (uses admin client to read their email)
+    job?.poster_id
+      ? sendPosterApplicationEmail({
+          posterId: job.poster_id,
+          giggerFirstName: profile?.first_name ?? "A gigger",
+          giggerLastInitial: profile?.last_initial ?? "X",
+          giggerUserId: user.id,
+          jobTitle: job.title ?? "your job",
+          jobId,
+          bidAmount,
+        }).catch((err) => console.error("[applyToJob] Email failed:", err))
+      : Promise.resolve(),
+  ]);
 
   return { success: true };
+}
+
+/**
+ * Helper: fetch the poster's email + applicant's rating/stats and send
+ * the "new application" email. Uses the admin client since auth.users
+ * is not accessible via the user-scoped client.
+ */
+async function sendPosterApplicationEmail(input: {
+  posterId: string;
+  giggerFirstName: string;
+  giggerLastInitial: string;
+  giggerUserId: string;
+  jobTitle: string;
+  jobId: string;
+  bidAmount: number | null;
+}): Promise<void> {
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return; // service role missing
+  }
+
+  // Fetch poster's email (from auth.users via admin API)
+  const { data: posterAuth } = await admin.auth.admin.getUserById(input.posterId);
+  const posterEmail = posterAuth?.user?.email;
+  if (!posterEmail) return;
+
+  // Fetch poster's first name
+  const { data: posterProfile } = await admin
+    .from("nexgigs_profiles")
+    .select("first_name")
+    .eq("id", input.posterId)
+    .maybeSingle();
+
+  // Fetch applicant's rating and gigs completed
+  const [{ data: giggerRating }, { data: giggerXp }, { data: giggerProfile }] =
+    await Promise.all([
+      admin
+        .from("nexgigs_user_ratings")
+        .select("average_rating")
+        .eq("user_id", input.giggerUserId)
+        .maybeSingle(),
+      admin
+        .from("nexgigs_user_xp")
+        .select("gigs_completed")
+        .eq("user_id", input.giggerUserId)
+        .maybeSingle(),
+      admin
+        .from("nexgigs_profiles")
+        .select("city")
+        .eq("id", input.giggerUserId)
+        .maybeSingle(),
+    ]);
+
+  const email = newApplicationEmail({
+    posterFirstName: posterProfile?.first_name ?? "there",
+    giggerFirstName: input.giggerFirstName,
+    giggerLastInitial: input.giggerLastInitial,
+    jobTitle: input.jobTitle,
+    bidAmount: input.bidAmount,
+    jobId: input.jobId,
+    giggerRating: giggerRating?.average_rating ?? null,
+    giggerGigsCompleted: giggerXp?.gigs_completed ?? null,
+    giggerCity: giggerProfile?.city,
+  });
+
+  await sendEmail(posterEmail, email.subject, email.html);
 }
 
 export async function getMyGigs() {
