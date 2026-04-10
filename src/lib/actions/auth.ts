@@ -51,8 +51,9 @@ export async function signup(input: SignupInput) {
       city: parsed.data.city,
       state: parsed.data.state.toUpperCase(),
       zip_code: parsed.data.zipCode,
-      is_gigger: parsed.data.accountType === "gigger",
-      is_poster: parsed.data.accountType === "poster",
+      // All new members get full access — can both earn (gigger) and hire (poster)
+      is_gigger: true,
+      is_poster: true,
     });
 
   if (profileError) {

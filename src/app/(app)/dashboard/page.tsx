@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles } from "lucide-react";
 import { EarningsTracker } from "@/components/earnings/earnings-tracker";
+import { getOnboardingStatus } from "@/lib/actions/onboarding";
+import { WelcomeModal } from "@/components/onboarding/welcome-modal";
+import { GettingStartedChecklist } from "@/components/onboarding/getting-started-checklist";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -18,7 +21,7 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  const [{ data: xp }, { data: sub }] = await Promise.all([
+  const [{ data: xp }, { data: sub }, onboarding] = await Promise.all([
     supabase
       .from("nexgigs_user_xp")
       .select("*")
@@ -32,6 +35,7 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .single(),
+    getOnboardingStatus(),
   ]);
 
   const isElite = sub?.tier === "elite";
@@ -59,19 +63,16 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* AI Profile Builder Banner */}
-      {!profile?.bio && (
-        <Link href="/settings/ai-profile">
-          <div className="mt-6 mb-0 p-4 rounded-xl bg-gradient-to-r from-brand-orange/10 to-orange-600/10 border border-brand-orange/20 hover:border-brand-orange/40 transition-colors">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-brand-orange" />
-              <div>
-                <h3 className="text-sm font-bold text-white">Build Your Profile with AI</h3>
-                <p className="text-xs text-zinc-400">Let AI write your bio and help you get hired faster — takes 60 seconds</p>
-              </div>
-            </div>
-          </div>
-        </Link>
+      {/* Welcome modal — only shows once for new users */}
+      {onboarding && !onboarding.welcomed && (
+        <WelcomeModal firstName={profile?.first_name ?? "there"} />
+      )}
+
+      {/* Getting Started Checklist */}
+      {onboarding && !onboarding.checklistDismissed && (
+        <div className="mt-6">
+          <GettingStartedChecklist initialStatus={onboarding} />
+        </div>
       )}
 
       {/* Quick Stats */}

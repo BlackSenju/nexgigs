@@ -80,7 +80,8 @@ function AuthCallbackInner() {
         await supabase.from("nexgigs_profiles").insert({
           id: userId, first_name: firstName, last_initial: lastInitial.toUpperCase(),
           city: "", state: "", zip_code: "",
-          is_gigger: accountType === "gigger", is_poster: accountType === "poster",
+          // All new members get full access — both gigger and poster flags true
+          is_gigger: true, is_poster: true,
         });
         await Promise.all([
           supabase.from("nexgigs_user_xp").insert({ user_id: userId }),

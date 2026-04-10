@@ -5,6 +5,7 @@ import { DesktopRightSidebar } from "@/components/layout/desktop-right-sidebar";
 import { PWAInstallPrompt } from "@/components/ui/pwa-install";
 import { PushNotificationPrompt } from "@/components/ui/push-notification-prompt";
 import { LocationPrompt } from "@/components/ui/location-prompt";
+import { TourOverlay } from "@/components/onboarding/tour-overlay";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PWAInstallPrompt />
       <PushNotificationPrompt />
       <LocationPrompt />
+      <TourOverlay />
     </div>
   );
 }
