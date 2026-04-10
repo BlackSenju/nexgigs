@@ -9,6 +9,7 @@ import {
   MapPin, Shield, Settings, Plus, Loader2, Trash2,
   Star, Briefcase, CheckCircle, Image as ImageIcon,
   ShoppingBag, MessageSquare, Grid3X3, Share2, ExternalLink,
+  Crown, Rocket, Building2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export default function MyProfilePage() {
   const [portfolioCategory, setPortfolioCategory] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [shopCopied, setShopCopied] = useState(false);
+  const [userTier, setUserTier] = useState("free");
 
   useEffect(() => {
     async function load() {
@@ -63,6 +65,17 @@ export default function MyProfilePage() {
       setReviews(reviewsRes.data ?? []);
       setShopItems(shopRes.data ?? []);
       setGigCounts({ active: activeRes.count ?? 0, completed: completedRes.count ?? 0, posted: postedRes.count ?? 0 });
+
+      // Fetch subscription tier
+      const { data: sub } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("tier")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .single();
+      if (sub?.tier) setUserTier(sub.tier);
+
       setLoading(false);
     }
     load();
@@ -109,6 +122,9 @@ export default function MyProfilePage() {
               <h1 className="text-lg font-black text-white">{profile.first_name as string} {profile.last_initial as string}.</h1>
               {Boolean(profile.identity_verified) && <Shield className="w-4 h-4 text-brand-orange" />}
               {Boolean(profile.background_checked) && <CheckCircle className="w-3.5 h-3.5 text-green-400" />}
+              {userTier === "pro" && <span title="Pro Gigger"><Crown className="w-3.5 h-3.5 text-blue-400" /></span>}
+              {userTier === "elite" && <span title="Elite Gigger"><Rocket className="w-3.5 h-3.5 text-purple-400" /></span>}
+              {(userTier === "business_starter" || userTier === "business_growth" || userTier === "enterprise") && <span title="Business"><Building2 className="w-3.5 h-3.5 text-green-400" /></span>}
             </div>
             <div className="flex items-center gap-1 text-xs text-zinc-400">
               <MapPin className="w-3 h-3" />

@@ -31,6 +31,7 @@ export default function JobFeedPage() {
         price, price_min, price_max, hourly_rate, duration_type,
         is_urgent, is_remote, applications_count, created_at,
         latitude, longitude,
+        poster_id,
         poster:nexgigs_profiles!poster_id(first_name, last_initial)
       `)
       .eq("status", "open")
@@ -47,6 +48,20 @@ export default function JobFeedPage() {
     }
 
     const { data } = await query;
+
+    // Fetch subscription tiers for all poster IDs in one query
+    const posterIds = Array.from(new Set((data ?? []).map((j: Record<string, unknown>) => j.poster_id as string).filter(Boolean)));
+    const tierMap: Record<string, string> = {};
+    if (posterIds.length > 0) {
+      const { data: subs } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("user_id, tier")
+        .in("user_id", posterIds)
+        .eq("status", "active");
+      for (const sub of subs ?? []) {
+        tierMap[sub.user_id] = sub.tier;
+      }
+    }
 
     const mapped: JobCardData[] = (data ?? []).map((job: Record<string, unknown>) => {
       const poster = job.poster as Record<string, string> | null;
@@ -69,12 +84,26 @@ export default function JobFeedPage() {
         poster_name: poster
           ? `${poster.first_name} ${poster.last_initial}.`
           : "Anonymous",
+        poster_tier: tierMap[job.poster_id as string] ?? "free",
         created_at: job.created_at as string,
         applications_count: (job.applications_count as number) ?? 0,
       };
     });
 
-    setJobs(mapped);
+    // Priority search placement: Pro/Elite/Business jobs appear first
+    const tierOrder: Record<string, number> = {
+      elite: 0, enterprise: 0, business_growth: 0,
+      pro: 1, business_starter: 1,
+      free: 2,
+    };
+    const sortedJobs = [...mapped].sort((a, b) => {
+      const aOrder = tierOrder[a.poster_tier ?? "free"] ?? 2;
+      const bOrder = tierOrder[b.poster_tier ?? "free"] ?? 2;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return 0; // maintain existing date order within same tier
+    });
+
+    setJobs(sortedJobs);
     setLoading(false);
   }, [selectedCategory, searchQuery]);
 

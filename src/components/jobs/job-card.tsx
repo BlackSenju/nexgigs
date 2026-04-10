@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Clock, User, Star, Zap } from "lucide-react";
+import { MapPin, Clock, User, Star, Zap, Crown, Rocket, Building2 } from "lucide-react";
 
 export interface JobCardData {
   id: string;
@@ -21,6 +21,7 @@ export interface JobCardData {
   longitude?: number;
   poster_name: string;
   poster_rating?: number;
+  poster_tier?: string;
   created_at: string;
   applications_count: number;
 }
@@ -97,6 +98,13 @@ export function JobCard({ job }: { job: JobCardData }) {
               <User className="w-3.5 h-3.5 text-zinc-400" />
             </div>
             <span>{job.poster_name}</span>
+            {job.poster_tier === "pro" && <span title="Pro Gigger"><Crown className="w-3 h-3 text-blue-400" /></span>}
+            {job.poster_tier === "elite" && <span title="Elite Gigger"><Rocket className="w-3 h-3 text-purple-400" /></span>}
+            {(job.poster_tier === "business_starter" || job.poster_tier === "business_growth" || job.poster_tier === "enterprise") && (
+              <span className="flex items-center gap-0.5 text-green-400 text-[10px] font-medium" title="Business">
+                <Building2 className="w-3 h-3" /> Biz
+              </span>
+            )}
             {job.poster_rating && (
               <span className="flex items-center gap-0.5 text-brand-orange">
                 <Star className="w-3 h-3 fill-current" />
