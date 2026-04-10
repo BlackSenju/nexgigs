@@ -69,7 +69,7 @@ const GIGGER_TIERS = [
       { text: "AI conversation assist", built: true },
       { text: "Elite badge on profile", built: true },
       { text: "Top search placement", built: true },
-      { text: "AI job matching (weekly picks)", built: false },
+      { text: "AI job matching", built: true },
       { text: "Priority customer support", built: false },
     ],
   },
