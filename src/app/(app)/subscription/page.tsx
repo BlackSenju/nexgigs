@@ -30,7 +30,7 @@ const GIGGER_TIERS = [
       { text: "Unlimited job applications & posting", built: true },
       { text: "Full messaging", built: true },
       { text: "Portfolio & shop listings", built: true },
-      { text: "3% commission on earnings", built: true },
+      { text: "5% commission on earnings", built: true },
       { text: "AI Profile Builder", built: true },
       { text: "3 AI assists per day", built: true },
       { text: "1 AI rewrite per day", built: true },
@@ -46,7 +46,7 @@ const GIGGER_TIERS = [
     popular: true,
     features: [
       { text: "Everything in Free", built: true },
-      { text: "2% commission (save 33%)", built: true },
+      { text: "3% commission (save 40%)", built: true },
       { text: "10 AI assists/day + unlimited rewrites", built: true },
       { text: "AI Pricing Suggestions (3/day)", built: true },
       { text: "Bundle deals & package tiers", built: true },
@@ -66,7 +66,7 @@ const GIGGER_TIERS = [
     icon: Rocket,
     features: [
       { text: "Everything in Pro", built: true },
-      { text: "0% commission (keep everything)", built: true },
+      { text: "1% commission (keep 99%)", built: true },
       { text: "Unlimited AI features", built: true },
       { text: "Elite badge on profile", built: true },
       { text: "Top search placement", built: true },

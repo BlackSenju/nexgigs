@@ -9,7 +9,7 @@ export const SUBSCRIPTION_TIERS = {
     price: 7.99,
     stripePriceId: "price_1TJncrHhY6fMamO1v36LOYKm",
     stripeProductId: "prod_UIOPUs8xvxjtEo",
-    commission: 0.02,
+    commission: 0.03,
     features: [
       "Priority placement in search",
       "Instant job alerts",
@@ -23,7 +23,7 @@ export const SUBSCRIPTION_TIERS = {
     price: 14.99,
     stripePriceId: "price_1TJncrHhY6fMamO1EpK47RBC",
     stripeProductId: "prod_UIOPq82kZM3aiX",
-    commission: 0,
+    commission: 0.01,
     features: [
       "Top placement in all searches",
       "0% commission (keep everything)",

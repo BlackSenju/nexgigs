@@ -16,6 +16,8 @@ import {
   Trash2,
   Activity,
   Eye,
+  HelpCircle,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -31,8 +33,9 @@ import {
   adminToggleAdmin,
   adminSetTier,
 } from "@/lib/actions/admin";
+import { getAllTickets, respondToTicket } from "@/lib/actions/support";
 
-const TABS = ["Overview", "Users", "Jobs", "Ghost Reports", "Audit Log"];
+const TABS = ["Overview", "Users", "Jobs", "Ghost Reports", "Support", "Audit Log"];
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
@@ -43,6 +46,7 @@ export default function AdminPage() {
   const [jobs, setJobs] = useState<Array<Record<string, unknown>>>([]);
   const [ghostReports, setGhostReports] = useState<Array<Record<string, unknown>>>([]);
   const [auditLog, setAuditLog] = useState<Array<Record<string, unknown>>>([]);
+  const [supportTickets, setSupportTickets] = useState<Array<Record<string, unknown>>>([]);
 
   useEffect(() => {
     async function load() {
@@ -61,12 +65,13 @@ export default function AdminPage() {
       setAuthorized(true);
 
       // Load all data in parallel
-      const [statsData, usersData, jobsData, ghostData, auditData] = await Promise.all([
+      const [statsData, usersData, jobsData, ghostData, auditData, ticketsData] = await Promise.all([
         getAdminStats(),
         getAdminUsers(),
         getAdminJobs(),
         getAdminGhostReports(),
         getAdminAuditLog(),
+        getAllTickets(),
       ]);
 
       setStats(statsData);
@@ -74,6 +79,7 @@ export default function AdminPage() {
       setJobs(jobsData);
       setGhostReports(ghostData);
       setAuditLog(auditData);
+      setSupportTickets(ticketsData);
       setLoading(false);
     }
     load();
@@ -223,6 +229,14 @@ export default function AdminPage() {
           })}
           {ghostReports.length === 0 && <EmptyMsg text="No ghost reports filed." />}
         </div>
+      )}
+
+      {/* Support */}
+      {tab === "Support" && (
+        <SupportManagement
+          tickets={supportTickets}
+          setSupportTickets={setSupportTickets}
+        />
       )}
 
       {/* Audit Log */}
@@ -492,6 +506,165 @@ function UserManagement({
         );
       })}
       {filtered.length === 0 && <EmptyMsg text="No users found." />}
+    </div>
+  );
+}
+
+const PRIORITY_ORDER: Record<string, number> = { vip: 0, urgent: 1, high: 2, normal: 3 };
+const PRIORITY_BADGE: Record<string, string> = {
+  vip: "bg-yellow-900/30 text-yellow-400",
+  urgent: "bg-purple-900/30 text-purple-400",
+  high: "bg-blue-900/30 text-blue-400",
+  normal: "bg-zinc-800 text-zinc-400",
+};
+const STATUS_BADGE: Record<string, string> = {
+  open: "bg-yellow-900/30 text-yellow-400",
+  in_progress: "bg-blue-900/30 text-blue-400",
+  resolved: "bg-green-900/30 text-green-400",
+};
+
+function SupportManagement({
+  tickets,
+  setSupportTickets,
+}: {
+  tickets: Array<Record<string, unknown>>;
+  setSupportTickets: (t: Array<Record<string, unknown>>) => void;
+}) {
+  const [filter, setFilter] = useState<"all" | "open" | "resolved">("all");
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const filtered = tickets
+    .filter((t) => {
+      if (filter === "open") return t.status === "open" || t.status === "in_progress";
+      if (filter === "resolved") return t.status === "resolved";
+      return true;
+    })
+    .sort((a, b) => {
+      const pa = PRIORITY_ORDER[a.priority as string] ?? 3;
+      const pb = PRIORITY_ORDER[b.priority as string] ?? 3;
+      return pa - pb;
+    });
+
+  async function handleRespond(ticketId: string) {
+    if (!responseText.trim()) return;
+    setSending(true);
+    const result = await respondToTicket(ticketId, responseText);
+    if (!result.error) {
+      setSupportTickets(
+        tickets.map((t) =>
+          t.id === ticketId
+            ? { ...t, admin_response: responseText.trim(), status: "resolved", responded_at: new Date().toISOString() }
+            : t
+        )
+      );
+      setRespondingTo(null);
+      setResponseText("");
+    }
+    setSending(false);
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Filter tabs */}
+      <div className="flex gap-1">
+        {(["all", "open", "resolved"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors",
+              filter === f ? "bg-brand-orange text-white" : "text-zinc-400 hover:text-white bg-card"
+            )}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-zinc-500">{filtered.length} ticket{filtered.length !== 1 ? "s" : ""}</p>
+
+      {filtered.map((ticket) => {
+        const user = ticket.user as Record<string, string> | null;
+        const isResponding = respondingTo === (ticket.id as string);
+
+        return (
+          <div key={ticket.id as string} className="rounded-xl bg-card border border-zinc-800 overflow-hidden">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-sm font-medium text-white truncate">
+                    {ticket.subject as string}
+                  </span>
+                  <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap", PRIORITY_BADGE[ticket.priority as string] ?? "bg-zinc-800 text-zinc-400")}>
+                    {(ticket.priority as string).toUpperCase()}
+                  </span>
+                  <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap", STATUS_BADGE[ticket.status as string] ?? "bg-zinc-800 text-zinc-400")}>
+                    {(ticket.status as string).replace("_", " ")}
+                  </span>
+                </div>
+              </div>
+              <div className="text-xs text-zinc-500 mb-1">
+                {user ? `${user.first_name} ${user.last_initial}.` : "Unknown"} &middot;{" "}
+                {ticket.category as string} &middot;{" "}
+                {new Date(ticket.created_at as string).toLocaleDateString()}
+              </div>
+              <p className="text-xs text-zinc-400">{ticket.description as string}</p>
+
+              {Boolean(ticket.admin_response) && (
+                <div className="mt-2 p-2 rounded-lg bg-green-900/10 border border-green-800/30">
+                  <span className="text-[10px] font-medium text-green-400 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> Resolved
+                  </span>
+                  <p className="text-xs text-zinc-300 mt-0.5">{ticket.admin_response as string}</p>
+                </div>
+              )}
+
+              {!ticket.admin_response && (
+                <div className="mt-2 flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setRespondingTo(isResponding ? null : (ticket.id as string));
+                      setResponseText("");
+                    }}
+                  >
+                    <Send className="w-3 h-3 mr-1" /> {isResponding ? "Cancel" : "Respond"}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {isResponding && (
+              <div className="px-3 pb-3 pt-1 border-t border-zinc-800 space-y-2">
+                <textarea
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg border border-zinc-700 bg-background text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-orange resize-none"
+                  placeholder="Type your response..."
+                />
+                <Button
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => handleRespond(ticket.id as string)}
+                  disabled={sending || !responseText.trim()}
+                >
+                  {sending ? (
+                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Sending...</>
+                  ) : (
+                    <><CheckCircle className="w-3 h-3 mr-1" /> Resolve &amp; Send</>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {filtered.length === 0 && <EmptyMsg text="No support tickets found." />}
     </div>
   );
 }
