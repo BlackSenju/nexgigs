@@ -42,15 +42,16 @@ async function ensureProfileExists(userId: string, email: string, fullName: stri
 
   if (insertErr) return null;
 
-  // Best-effort companion rows + admin notification
+  // Best-effort companion rows
   const displayName = `${firstName} ${lastInitial}.`;
   await Promise.all([
     admin.from("nexgigs_user_xp").insert({ user_id: userId }).then(() => null, () => null),
     admin.from("nexgigs_user_ratings").insert({ user_id: userId }).then(() => null, () => null),
   ]);
 
-  // Fire admin notification (Discord + email)
-  notifyAdmin({
+  // AWAIT admin notification — fire-and-forget doesn't work on Vercel
+  // because pending promises are killed when the serverless function returns.
+  const notifyResult = await notifyAdmin({
     eventType: "new_signup",
     title: `New User: ${displayName}`,
     description: `${email} just created a NexGigs account.`,
@@ -62,6 +63,13 @@ async function ensureProfileExists(userId: string, email: string, fullName: stri
       userId,
     },
   });
+
+  if (!notifyResult.discord.sent) {
+    console.error("[dashboard self-heal] Discord failed:", notifyResult.discord.error);
+  }
+  if (!notifyResult.email.sent) {
+    console.error("[dashboard self-heal] Email failed:", notifyResult.email.error);
+  }
 
   // Re-read the freshly created profile
   const { data } = await admin

@@ -237,20 +237,27 @@ export async function notifyDiscord(
 ): Promise<void> {
   const channel = EVENT_CHANNEL_MAP[event] || "security";
   const webhookUrl = getWebhookUrl(channel);
-  if (!webhookUrl) return;
+  if (!webhookUrl) {
+    throw new Error(
+      `No Discord webhook configured for channel "${channel}". Set DISCORD_WEBHOOK_${channel.toUpperCase()} or DISCORD_WEBHOOK_URL.`
+    );
+  }
 
   const embed = getEmbedForEvent(event, data);
 
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: "NexGigs",
-        embeds: [embed],
-      }),
-    });
-  } catch (error) {
-    console.error("[Discord] Failed to send notification:", error);
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: "NexGigs",
+      embeds: [embed],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Discord webhook returned ${response.status}: ${body.slice(0, 200)}`
+    );
   }
 }

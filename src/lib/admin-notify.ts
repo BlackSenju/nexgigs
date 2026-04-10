@@ -32,33 +32,53 @@ export interface AdminNotification {
   readonly metadata?: Record<string, string | number | boolean | null | undefined>;
 }
 
-/**
- * Notify the admin via Discord AND email.
- * Fire-and-forget — does not block or throw.
- */
-export function notifyAdmin(notification: AdminNotification): void {
-  Promise.all([
-    sendDiscord(notification).catch((err) => {
-      console.error("[admin-notify] Discord failed:", err);
-    }),
-    sendAdminEmail(notification).catch((err) => {
-      console.error("[admin-notify] Email failed:", err);
-    }),
-  ]).catch((err) => {
-    console.error("[admin-notify] Failed:", err);
-  });
+export interface NotifyAdminResult {
+  discord: { sent: boolean; error?: string };
+  email: { sent: boolean; error?: string };
 }
 
 /**
- * Same as notifyAdmin but awaits completion. Use sparingly — most callers
- * should use the fire-and-forget variant.
+ * Notify the admin via Discord AND email.
+ * Returns a Promise that resolves after BOTH channels complete (or fail).
+ *
+ * IMPORTANT: Always await this in server components / server actions.
+ * Fire-and-forget does NOT work on Vercel — serverless functions kill
+ * pending promises the moment the response is sent.
  */
-export async function notifyAdminSync(notification: AdminNotification): Promise<void> {
-  await Promise.allSettled([
+export async function notifyAdmin(
+  notification: AdminNotification
+): Promise<NotifyAdminResult> {
+  const [discordResult, emailResult] = await Promise.allSettled([
     sendDiscord(notification),
     sendAdminEmail(notification),
   ]);
+
+  return {
+    discord:
+      discordResult.status === "fulfilled"
+        ? { sent: true }
+        : {
+            sent: false,
+            error:
+              discordResult.reason instanceof Error
+                ? discordResult.reason.message
+                : String(discordResult.reason),
+          },
+    email:
+      emailResult.status === "fulfilled"
+        ? { sent: true }
+        : {
+            sent: false,
+            error:
+              emailResult.reason instanceof Error
+                ? emailResult.reason.message
+                : String(emailResult.reason),
+          },
+  };
 }
+
+/** @deprecated Use `notifyAdmin` — it now returns a Promise. */
+export const notifyAdminSync = notifyAdmin;
 
 async function sendDiscord(n: AdminNotification): Promise<void> {
   // Map our admin events to the existing notifyDiscord event types
@@ -99,8 +119,7 @@ async function sendDiscord(n: AdminNotification): Promise<void> {
 
 async function sendAdminEmail(n: AdminNotification): Promise<void> {
   if (!ADMIN_EMAIL) {
-    console.warn("[admin-notify] ADMIN_EMAIL not set — skipping email for:", n.eventType);
-    return;
+    throw new Error("ADMIN_EMAIL env var not set");
   }
 
   const metaRows = n.metadata
@@ -139,7 +158,10 @@ async function sendAdminEmail(n: AdminNotification): Promise<void> {
 </body>
 </html>`;
 
-  await sendEmail(ADMIN_EMAIL, `[NexGigs] ${n.title}`, html);
+  const result = await sendEmail(ADMIN_EMAIL, `[NexGigs] ${n.title}`, html);
+  if (!result.success) {
+    throw new Error(result.error ?? "sendEmail returned failure");
+  }
 }
 
 function escapeHtml(s: string): string {
