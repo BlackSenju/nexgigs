@@ -8,7 +8,6 @@ import {
   FileText,
   Download,
   Printer,
-  DollarSign,
   Search,
   X,
 } from "lucide-react";
