@@ -14,7 +14,7 @@ import { SERVICE_CATEGORIES, SKILL_SUGGESTIONS } from "@/lib/constants";
 import {
   Shield, Camera, Plus, Loader2, X, ChevronRight,
   CheckCircle, CreditCard, DollarSign, Award, LogOut,
-  User, Globe, Bell, Lock, Sparkles,
+  User, Globe, Bell, Lock, Sparkles, HelpCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -266,6 +266,9 @@ export default function SettingsPage() {
           </Link>
           <Link href="/safety" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
             <span className="flex items-center gap-2"><Bell className="w-4 h-4" /> Safety & Notifications</span><ChevronRight className="w-4 h-4" />
+          </Link>
+          <Link href="/support" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
+            <span className="flex items-center gap-2"><HelpCircle className="w-4 h-4" /> Support</span><ChevronRight className="w-4 h-4" />
           </Link>
           <Link href="/privacy" className="flex items-center justify-between py-2.5 text-sm text-zinc-400 hover:text-white transition-colors">
             <span className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> Privacy Policy</span><ChevronRight className="w-4 h-4" />

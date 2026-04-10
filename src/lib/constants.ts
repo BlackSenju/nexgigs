@@ -52,9 +52,9 @@ export const LEVELS = [
 
 export const PRICING_TIERS = {
   gigger: {
-    free: { name: "Free Gigger", price: 0, commission: 0.03 },
-    pro: { name: "Pro Gigger", price: 7.99, commission: 0.02 },
-    elite: { name: "Elite Gigger", price: 14.99, commission: 0 },
+    free: { name: "Free Gigger", price: 0, commission: 0.05 },
+    pro: { name: "Pro Gigger", price: 7.99, commission: 0.03 },
+    elite: { name: "Elite Gigger", price: 14.99, commission: 0.01 },
   },
   poster: {
     free: { name: "Free", fee: 0.07 },
