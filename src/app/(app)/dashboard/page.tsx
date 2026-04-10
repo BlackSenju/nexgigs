@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles } from "lucide-react";
+import { EarningsTracker } from "@/components/earnings/earnings-tracker";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -103,6 +104,11 @@ export default async function DashboardPage() {
           </div>
           <div className="text-xs text-zinc-400">Earned</div>
         </div>
+      </div>
+
+      {/* Earnings Tracker */}
+      <div className="mt-6">
+        <EarningsTracker />
       </div>
 
       {/* Quick Actions */}
