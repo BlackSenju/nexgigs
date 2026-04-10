@@ -16,6 +16,16 @@ function LoadingSpinner({ message = "Signing you in..." }: { message?: string })
   );
 }
 
+/** Race a promise against a timeout. Throws "timeout" if it doesn't resolve in time. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 function AuthCallbackInner() {
   const searchParams = useSearchParams();
   const supabaseRef = useRef(createClient());
@@ -24,9 +34,20 @@ function AuthCallbackInner() {
     const supabase = supabaseRef.current;
     let redirected = false;
 
+    function safeRedirect(path: string) {
+      if (redirected) return;
+      redirected = true;
+      window.location.replace(path);
+    }
+
+    function redirectWithError(message: string) {
+      const params = new URLSearchParams({ signup_error: message });
+      safeRedirect(`/?${params.toString()}`);
+    }
+
     /**
      * Always create the profile via the server action BEFORE redirecting.
-     * Errors are surfaced via ?error= so we don't strand users.
+     * Errors are surfaced via ?signup_error= so we don't strand users.
      */
     async function finishSignup(email: string) {
       try {
@@ -37,30 +58,33 @@ function AuthCallbackInner() {
             | null) ?? "gigger";
         sessionStorage.removeItem("nexgigs_account_type");
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await withTimeout(
+          supabase.auth.getUser(),
+          5000,
+          "auth.getUser"
+        );
         const fullName = user?.user_metadata?.full_name ?? "";
         const nameParts = fullName.split(" ").filter(Boolean);
         const firstName = nameParts[0] || email.split("@")[0] || "User";
         const lastInitial =
           nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : "X";
 
-        const result = await ensureOAuthProfile({
-          firstName,
-          lastInitial,
-          accountType,
-        });
+        // Server action with hard 8s timeout
+        const result = await withTimeout(
+          ensureOAuthProfile({ firstName, lastInitial, accountType }),
+          8000,
+          "ensureOAuthProfile"
+        );
 
         if (result?.error) {
-          const params = new URLSearchParams({ signup_error: result.error });
-          window.location.replace(`/?${params.toString()}`);
+          redirectWithError(result.error);
           return;
         }
 
-        window.location.replace("/dashboard");
+        safeRedirect("/dashboard");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        const params = new URLSearchParams({ signup_error: message });
-        window.location.replace(`/?${params.toString()}`);
+        redirectWithError(message);
       }
     }
 
@@ -73,16 +97,20 @@ function AuthCallbackInner() {
     async function exchangeAndRedirect() {
       const code = searchParams.get("code");
       if (code) {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        const { data, error } = await withTimeout(
+          supabase.auth.exchangeCodeForSession(code),
+          8000,
+          "exchangeCodeForSession"
+        );
         if (!error && data.session) {
           await handleSession(data.session);
           return;
         }
       }
       // Fallback: poll for an existing session (e.g., implicit flow)
-      const maxWait = 8000;
+      const maxWait = 6000;
       const start = Date.now();
-      while (Date.now() - start < maxWait) {
+      while (Date.now() - start < maxWait && !redirected) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await handleSession(session);
@@ -91,10 +119,7 @@ function AuthCallbackInner() {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
       // Timed out without a session — send to login with error
-      if (!redirected) {
-        redirected = true;
-        window.location.replace("/login?error=auth_timeout");
-      }
+      redirectWithError("Authentication timed out. Please try signing in again.");
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -106,15 +131,18 @@ function AuthCallbackInner() {
     );
 
     exchangeAndRedirect().catch((err) => {
-      if (!redirected) {
-        redirected = true;
-        const message = err instanceof Error ? err.message : "Auth failed";
-        const params = new URLSearchParams({ signup_error: message });
-        window.location.replace(`/?${params.toString()}`);
-      }
+      const message = err instanceof Error ? err.message : "Auth failed";
+      redirectWithError(message);
     });
 
+    // Hard safety net: if we haven't redirected in 20 seconds, force redirect
+    // to home page with an error so the user is never stranded.
+    const safetyTimeout = setTimeout(() => {
+      redirectWithError("Sign-in is taking too long. Please try again.");
+    }, 20000);
+
     return () => {
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [searchParams]);
