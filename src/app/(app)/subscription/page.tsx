@@ -66,7 +66,7 @@ const GIGGER_TIERS = [
       { text: "0% commission (keep everything)", built: true },
       { text: "Unlimited AI features", built: true },
       { text: "Unlimited AI pricing", built: true },
-      { text: "AI conversation assist (coming soon)", built: false },
+      { text: "AI conversation assist", built: true },
       { text: "Elite badge on profile", built: true },
       { text: "Top search placement", built: true },
       { text: "AI job matching (weekly picks)", built: false },

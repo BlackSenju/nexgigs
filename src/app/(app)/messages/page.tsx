@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Search, Send, ArrowLeft, User, Loader2 } from "lucide-react";
+import { Search, Send, ArrowLeft, User, Loader2, Sparkles } from "lucide-react";
 import { ContentChecker } from "@/components/ui/ai-assist";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -35,15 +35,35 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sendingMsg, setSendingMsg] = useState(false);
   const [userId, setUserId] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [suggestingReply, setSuggestingReply] = useState(false);
+  const [isElite, setIsElite] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const suggestionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load conversations
+  // Load conversations and check subscription tier
   useEffect(() => {
     async function load() {
       const result = await getConversations();
       setConversations(result.conversations);
       setUserId(result.userId ?? "");
       setLoading(false);
+
+      // Check if user is Elite tier
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: subs } = await supabase
+          .from("nexgigs_subscriptions")
+          .select("tier, status")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (subs && subs.length > 0 && subs[0].tier === "elite") {
+          setIsElite(true);
+        }
+      }
     }
     load();
   }, []);
@@ -95,6 +115,73 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const activeConvo = conversations.find((c) => c.id === selectedConvo);
+
+  // Clear suggestions when conversation changes
+  useEffect(() => {
+    setAiSuggestions([]);
+    if (suggestionsTimerRef.current) {
+      clearTimeout(suggestionsTimerRef.current);
+      suggestionsTimerRef.current = null;
+    }
+  }, [selectedConvo]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (suggestionsTimerRef.current) {
+        clearTimeout(suggestionsTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleAiSuggest = useCallback(async () => {
+    if (suggestingReply || messages.length === 0) return;
+    setSuggestingReply(true);
+    setAiSuggestions([]);
+
+    // Build conversation context from last 5 messages
+    const recentMessages = messages.slice(-5).map((msg) => {
+      const isMe = msg.sender_id === userId;
+      return `${isMe ? "Me" : "Them"}: ${msg.content}`;
+    });
+
+    try {
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "reply",
+          conversationContext: recentMessages.join("\n"),
+          userRole: "gigger",
+          jobTitle: activeConvo?.jobTitle || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.suggestions && Array.isArray(data.suggestions)) {
+        setAiSuggestions(data.suggestions);
+        // Auto-dismiss after 30 seconds
+        suggestionsTimerRef.current = setTimeout(() => {
+          setAiSuggestions([]);
+          suggestionsTimerRef.current = null;
+        }, 30000);
+      }
+    } catch {
+      // Silently fail — AI is optional
+    } finally {
+      setSuggestingReply(false);
+    }
+  }, [suggestingReply, messages, userId, activeConvo]);
+
+  function handleSelectSuggestion(suggestion: string) {
+    setNewMessage(suggestion);
+    setAiSuggestions([]);
+    if (suggestionsTimerRef.current) {
+      clearTimeout(suggestionsTimerRef.current);
+      suggestionsTimerRef.current = null;
+    }
+  }
+
   async function handleSend() {
     if (!newMessage.trim() || !selectedConvo || sendingMsg) return;
     setSendingMsg(true);
@@ -105,8 +192,6 @@ export default function MessagesPage() {
     }
     setSendingMsg(false);
   }
-
-  const activeConvo = conversations.find((c) => c.id === selectedConvo);
 
   function formatTime(date: string) {
     const d = new Date(date);
@@ -267,7 +352,40 @@ export default function MessagesPage() {
       {/* Message input */}
       <div className="px-4 py-3 border-t border-zinc-800">
         <ContentChecker content={newMessage} className="mb-1" />
+
+        {/* AI Suggestion pills */}
+        {aiSuggestions.length > 0 && (
+          <div className="flex flex-col gap-1.5 mb-2">
+            <span className="text-[10px] text-zinc-500 font-medium flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> AI Suggestions — tap to use
+            </span>
+            {aiSuggestions.map((suggestion, i) => (
+              <button
+                key={i}
+                onClick={() => handleSelectSuggestion(suggestion)}
+                className="text-left text-xs px-3 py-2 rounded-lg bg-zinc-800/60 border border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/60 hover:border-brand-orange/30 transition-colors line-clamp-2"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
+          {isElite && (
+            <button
+              onClick={handleAiSuggest}
+              disabled={suggestingReply || messages.length === 0}
+              title="AI Suggest Reply"
+              className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-brand-orange hover:border-brand-orange/50 transition-colors disabled:opacity-50"
+            >
+              {suggestingReply ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+            </button>
+          )}
           <input
             type="text"
             value={newMessage}

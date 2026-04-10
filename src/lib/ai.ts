@@ -336,6 +336,54 @@ Suggest competitive pricing for this listing. Include package tiers if it's a se
 }
 
 /**
+ * AI Conversation Assist — suggest professional reply drafts in the messaging system.
+ * Elite tier only.
+ */
+export async function suggestReply(input: {
+  conversationContext: string; // last 5-10 messages
+  userRole: string; // "gigger" or "poster"
+  jobTitle?: string;
+}): Promise<{ suggestions: string[] }> {
+  const result = await quickAI(
+    `You are a professional communication assistant for NexGigs, a gig marketplace. Help the user craft professional, friendly replies.
+
+RULES:
+- Generate exactly 3 reply suggestions, from short to detailed
+- Keep replies concise, professional, and friendly
+- Match the tone of the conversation
+- If discussing pricing, be fair but confident
+- If scheduling, suggest specific times
+- Never be passive-aggressive or overly formal
+- Use natural language, not corporate-speak
+- Return ONLY valid JSON: {"suggestions": ["reply1", "reply2", "reply3"]}`,
+    `Conversation context (most recent messages):
+${input.conversationContext}
+
+The user is the ${input.userRole}.
+${input.jobTitle ? `This is about the job: "${input.jobTitle}"` : ""}
+
+Generate 3 professional reply suggestions.`,
+    800
+  );
+
+  try {
+    let cleaned = result.trim();
+    if (cleaned.startsWith("\`\`\`")) {
+      cleaned = cleaned.replace(/^\`\`\`(?:json)?\n?/, "").replace(/\n?\`\`\`$/, "");
+    }
+    return JSON.parse(cleaned);
+  } catch {
+    return {
+      suggestions: [
+        "Thanks for reaching out! I'd be happy to discuss this further.",
+        "That sounds great. When would be a good time to connect?",
+        "I appreciate the offer. Let me review and get back to you shortly.",
+      ],
+    };
+  }
+}
+
+/**
  * Generate a personalized weekly digest for a user.
  */
 export async function generateWeeklyDigest(input: {
