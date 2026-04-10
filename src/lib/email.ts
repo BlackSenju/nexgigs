@@ -59,6 +59,7 @@ export {
   jobPostedEmail,
   hiredEmail,
   jobMatchesDigestEmail,
+  reengagementEmail,
 } from "./emails/templates";
 
 /** @deprecated Use newApplicationEmail — old signature with positional args. */

@@ -409,3 +409,81 @@ export function jobMatchesDigestEmail(input: {
     ),
   };
 }
+
+// ────────────────────────────────────────────────────────────────
+// PHASE 3: Dormant User Re-engagement
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Sent to users who haven't logged in for 7+ days.
+ * Goal: reactivate dormant users with a "here's what you missed" pitch.
+ */
+export function reengagementEmail(input: {
+  firstName: string;
+  newJobsCount: number;
+  newGiggersCount: number;
+  highlightedJobs?: Array<{
+    id: string;
+    title: string;
+    category: string;
+    city: string;
+    price?: number | null;
+  }>;
+}): EmailTemplate {
+  const name = escapeHtml(input.firstName);
+
+  const jobRows = (input.highlightedJobs ?? [])
+    .slice(0, 3)
+    .map((job) => {
+      const price =
+        job.price != null ? `$${job.price}` : "Open to bids";
+      return `
+      <a href="${BASE_URL}/jobs/${job.id}" style="display:block;text-decoration:none;background:#0a0a0a;border:1px solid #262626;border-radius:10px;padding:14px;margin:8px 0;">
+        <p style="color:#ffffff;font-size:14px;font-weight:700;margin:0 0 4px;">${escapeHtml(job.title)}</p>
+        <p style="color:#71717a;font-size:12px;margin:0 0 4px;">${escapeHtml(job.category)} • ${escapeHtml(job.city)}</p>
+        <p style="color:#FF4D00;font-size:13px;font-weight:700;margin:0;">${escapeHtml(price)}</p>
+      </a>`;
+    })
+    .join("");
+
+  return {
+    subject: `We miss you, ${name} — ${input.newJobsCount} new jobs in Milwaukee`,
+    preheader: `Here's what you missed this week on NexGigs.`,
+    html: wrapEmail(
+      `
+      <h1 style="color:#ffffff;font-size:22px;font-weight:900;margin:0 0 12px;">
+        👋 We miss you, ${name}
+      </h1>
+      <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 20px;">
+        It's been a minute! Here's what you missed on NexGigs this week:
+      </p>
+
+      <div style="display:table;width:100%;margin:20px 0;">
+        <div style="display:table-row;">
+          <div style="display:table-cell;background:#0a0a0a;border:1px solid #262626;border-radius:10px;padding:16px;text-align:center;width:48%;">
+            <p style="color:#71717a;font-size:11px;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.5px;">New jobs</p>
+            <p style="color:#FF4D00;font-size:24px;font-weight:900;margin:0;">${input.newJobsCount}</p>
+          </div>
+          <div style="display:table-cell;width:4%;"></div>
+          <div style="display:table-cell;background:#0a0a0a;border:1px solid #262626;border-radius:10px;padding:16px;text-align:center;width:48%;">
+            <p style="color:#71717a;font-size:11px;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.5px;">New giggers</p>
+            <p style="color:#FF4D00;font-size:24px;font-weight:900;margin:0;">${input.newGiggersCount}</p>
+          </div>
+        </div>
+      </div>
+
+      ${
+        jobRows
+          ? `<h3 style="color:#ffffff;font-size:14px;font-weight:700;margin:24px 0 8px;">Jobs picked for you</h3>${jobRows}`
+          : ""
+      }
+
+      ${button("Come Back to NexGigs", `${BASE_URL}/jobs`)}
+
+      <p style="color:#71717a;font-size:11px;margin:20px 0 0;text-align:center;">
+        Not interested? <a href="${BASE_URL}/settings?tab=notifications" style="color:#71717a;text-decoration:underline;">Unsubscribe from these emails</a>
+      </p>
+      `
+    ),
+  };
+}

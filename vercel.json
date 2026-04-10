@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/job-matches",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/reengagement",
+      "schedule": "0 15 * * 3"
+    }
+  ]
+}
