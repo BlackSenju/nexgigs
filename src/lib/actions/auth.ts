@@ -43,8 +43,15 @@ export async function signup(input: SignupInput) {
   const displayName = `${parsed.data.firstName} ${parsed.data.lastInitial.toUpperCase()}.`;
 
   // Use admin client for profile creation — bypasses RLS since
-  // the new user is not yet authenticated when signup runs
-  const admin = createAdminClient();
+  // the new user is not yet authenticated when signup runs.
+  // Wrap in try-catch so a missing service role key returns a clean error.
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Admin client init failed";
+    return { error: `Server config error: ${msg}. Contact support.` };
+  }
 
   // Create profile (idempotent — upsert in case row already exists)
   const { error: profileError } = await admin
@@ -128,14 +135,26 @@ export async function ensureOAuthProfile(input: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const admin = createAdminClient();
+  // Try to create admin client. If service role key is missing/invalid,
+  // return a clean error instead of throwing (which can hang the server action)
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Admin client init failed";
+    return { error: `Server config error: ${msg}` };
+  }
 
   // Check if profile already exists
-  const { data: existing } = await admin
+  const { data: existing, error: selectError } = await admin
     .from("nexgigs_profiles")
     .select("id")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (selectError) {
+    return { error: `Profile lookup failed: ${selectError.message}` };
+  }
 
   if (existing) {
     return { success: true, alreadyExists: true };
