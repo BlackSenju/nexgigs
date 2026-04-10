@@ -58,6 +58,21 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* AI Profile Builder Banner */}
+      {!profile?.bio && (
+        <Link href="/settings/ai-profile">
+          <div className="mt-6 mb-0 p-4 rounded-xl bg-gradient-to-r from-brand-orange/10 to-orange-600/10 border border-brand-orange/20 hover:border-brand-orange/40 transition-colors">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-brand-orange" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Build Your Profile with AI</h3>
+                <p className="text-xs text-zinc-400">Let AI write your bio and help you get hired faster — takes 60 seconds</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* Quick Stats */}
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-4 rounded-xl bg-card border border-zinc-800">

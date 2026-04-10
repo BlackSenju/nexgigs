@@ -17,6 +17,7 @@ import {
   Users,
   CheckCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const STEPS = ["Category", "Details", "Location", "Pricing", "Review"];
 export default function PostJobPage() {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
   const [form, setForm] = useState({
     category: "",
     title: "",
@@ -95,6 +97,7 @@ export default function PostJobPage() {
       return;
     }
 
+    if (result.job?.id) setCreatedJobId(result.job.id);
     setSubmitted(true);
     setSubmitting(false);
   }
@@ -110,8 +113,20 @@ export default function PostJobPage() {
           Your job is live. Giggers in your area can now see it and apply.
         </p>
         <div className="mt-8 flex flex-col gap-3">
+          {createdJobId && (
+            <Link href={`/jobs/${createdJobId}/instant-match`}>
+              <Button
+                size="lg"
+                className="w-full bg-gradient-to-r from-brand-orange to-orange-600 hover:from-brand-orange/90 hover:to-orange-600/90"
+              >
+                <Sparkles className="w-4 h-4 mr-2" /> Find Me Someone Now
+              </Button>
+            </Link>
+          )}
           <Link href="/jobs">
-            <Button className="w-full">View Job Feed</Button>
+            <Button className="w-full" variant={createdJobId ? "outline" : "primary"}>
+              View Job Feed
+            </Button>
           </Link>
           <Link href="/gigs">
             <Button variant="outline" className="w-full">

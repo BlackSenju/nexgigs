@@ -384,6 +384,74 @@ Generate 3 professional reply suggestions.`,
 }
 
 /**
+ * AI Profile Builder — auto-generate a professional profile from minimal input.
+ */
+export async function buildProfile(input: {
+  name: string;
+  skills: string[];
+  experience: string;
+  city: string;
+  isGigger: boolean;
+  isPoster: boolean;
+}): Promise<{
+  bio: string;
+  serviceDescription: string;
+  suggestedHourlyRate: number;
+  suggestedCategories: string[];
+  profileTips: string[];
+}> {
+  const result = await quickAI(
+    `You are a professional profile writer for NexGigs, a hyperlocal gig marketplace. Help users create compelling profiles that attract clients.
+
+RULES:
+- Write in first person as if the user wrote it
+- Keep bio under 150 words, warm and professional
+- Mention their city and skills naturally
+- Include what makes them unique
+- Service description should be specific about what they offer
+- Suggest realistic hourly rates based on their skills and market
+- Return ONLY valid JSON, no markdown
+
+Return format:
+{
+  "bio": "First-person professional bio",
+  "serviceDescription": "What I offer as a service",
+  "suggestedHourlyRate": 45,
+  "suggestedCategories": ["category1", "category2"],
+  "profileTips": ["tip1", "tip2", "tip3"]
+}`,
+    `Name: ${input.name}
+Skills: ${input.skills.join(", ")}
+What they do: ${input.experience}
+City: ${input.city}
+Account type: ${input.isGigger ? "Gigger (earner)" : ""}${input.isPoster ? "Poster (hirer)" : ""}
+
+Generate a professional NexGigs profile for this person.`,
+    1200
+  );
+
+  try {
+    let cleaned = result.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(cleaned);
+  } catch {
+    return {
+      bio: `Hey! I'm ${input.name} based in ${input.city}. I specialize in ${input.skills.slice(0, 3).join(", ")}. Let's work together!`,
+      serviceDescription: `I offer professional ${input.skills[0] ?? "services"} in the ${input.city} area.`,
+      suggestedHourlyRate: 35,
+      suggestedCategories: [],
+      profileTips: [
+        "Add a professional photo to increase trust",
+        "Upload portfolio examples of your work",
+        "Set competitive pricing for your area",
+      ],
+    };
+  }
+}
+
+/**
  * Generate a personalized weekly digest for a user.
  */
 export async function generateWeeklyDigest(input: {

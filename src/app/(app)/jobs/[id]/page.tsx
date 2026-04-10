@@ -25,6 +25,7 @@ import {
   Bookmark,
   CheckCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 export default function JobDetailPage() {
@@ -310,8 +311,13 @@ export default function JobDetailPage() {
       {/* Apply section */}
       <div className="mt-6 sticky bottom-20 sm:bottom-4">
         {isOwner ? (
-          <div className="p-4 rounded-xl bg-card border border-zinc-800 text-center">
+          <div className="p-4 rounded-xl bg-card border border-zinc-800 text-center space-y-3">
             <p className="text-sm text-zinc-400">This is your job posting</p>
+            <Link href={`/jobs/${id}/instant-match`}>
+              <Button size="lg" className="w-full bg-gradient-to-r from-brand-orange to-orange-600 hover:from-brand-orange/90 hover:to-orange-600/90">
+                <Sparkles className="w-4 h-4 mr-2" /> Find Me Someone Now
+              </Button>
+            </Link>
             <Link href={`/jobs/${id}/applicants`}>
               <Button variant="outline" size="sm" className="mt-2">View Applicants</Button>
             </Link>

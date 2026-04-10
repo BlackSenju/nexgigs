@@ -14,7 +14,7 @@ import { SERVICE_CATEGORIES, SKILL_SUGGESTIONS } from "@/lib/constants";
 import {
   Shield, Camera, Plus, Loader2, X, ChevronRight,
   CheckCircle, CreditCard, DollarSign, Award, LogOut,
-  User, Globe, Bell, Lock,
+  User, Globe, Bell, Lock, Sparkles,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -123,6 +123,15 @@ export default function SettingsPage() {
           <h2 className="text-base font-bold text-white">{profile.first_name as string} {profile.last_initial as string}.</h2>
           <p className="text-xs text-zinc-400">{profile.city as string}, {profile.state as string}</p>
         </div>
+      </div>
+
+      {/* AI Profile Builder */}
+      <div className="p-3 rounded-xl bg-brand-orange/5 border border-brand-orange/20 mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-brand-orange" /> AI Profile Builder</h3>
+          <p className="text-[11px] text-zinc-400">Let AI write your bio and set up your profile in 60 seconds</p>
+        </div>
+        <Link href="/settings/ai-profile"><Button size="sm">Build</Button></Link>
       </div>
 
       {/* Bio & Location */}
