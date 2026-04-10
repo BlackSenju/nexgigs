@@ -109,6 +109,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "reply") {
+      // SECURITY: AI Conversation Assist is Elite-only
+      const { data: sub } = await supabase
+        .from("nexgigs_subscriptions")
+        .select("tier")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .single();
+      if (sub?.tier !== "elite") {
+        return NextResponse.json(
+          { error: "AI Conversation Assist requires Elite subscription", upgrade: true },
+          { status: 403 }
+        );
+      }
+
       try {
         const result = await suggestReply({
           conversationContext: body.conversationContext || "",

@@ -46,6 +46,28 @@ export async function createShopListing(input: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // SECURITY: Check tier for Pro+ features (bundles, package tiers)
+  const { data: sub } = await supabase
+    .from("nexgigs_subscriptions")
+    .select("tier")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .single();
+  const tier = sub?.tier ?? "free";
+  const isPro = ["pro", "elite", "business_starter", "business_growth", "enterprise"].includes(tier);
+
+  // Strip Pro-only fields from free user input
+  const sanitizedInput = isPro ? input : {
+    ...input,
+    priceBasic: undefined,
+    priceStandard: undefined,
+    pricePremium: undefined,
+    basicDescription: undefined,
+    standardDescription: undefined,
+    premiumDescription: undefined,
+  };
+
   // Content moderation
   const modResult = moderateShopItem({
     title: input.title,
@@ -68,12 +90,12 @@ export async function createShopListing(input: {
       listing_type: input.listingType,
       item_type: input.listingType === "product" ? "physical" : "digital",
       price: input.price,
-      price_basic: input.priceBasic,
-      price_standard: input.priceStandard,
-      price_premium: input.pricePremium,
-      basic_description: input.basicDescription,
-      standard_description: input.standardDescription,
-      premium_description: input.premiumDescription,
+      price_basic: sanitizedInput.priceBasic,
+      price_standard: sanitizedInput.priceStandard,
+      price_premium: sanitizedInput.pricePremium,
+      basic_description: sanitizedInput.basicDescription,
+      standard_description: sanitizedInput.standardDescription,
+      premium_description: sanitizedInput.premiumDescription,
       condition: input.condition ?? "new",
       shipping_type: input.shippingType ?? "none",
       shipping_price: input.shippingPrice ?? 0,
