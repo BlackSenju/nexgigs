@@ -87,7 +87,13 @@ export default function MyProfilePage() {
   }
 
   if (loading) return <div className="max-w-lg mx-auto px-4 py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-500" /></div>;
-  if (!profile) return null;
+  if (!profile) return (
+    <div className="max-w-lg mx-auto px-4 py-20 text-center">
+      <h1 className="text-xl font-black text-white">Complete Your Profile</h1>
+      <p className="mt-2 text-sm text-zinc-400">Your profile is being set up. Head to settings to add your details.</p>
+      <Link href="/settings"><Button className="mt-4" size="sm">Go to Settings</Button></Link>
+    </div>
+  );
 
   const avgRating = Number(rating?.average_rating ?? 0);
   const totalRatings = Number(rating?.total_ratings ?? 0);

@@ -79,7 +79,7 @@ function AuthCallbackInner() {
 
         await supabase.from("nexgigs_profiles").insert({
           id: userId, first_name: firstName, last_initial: lastInitial.toUpperCase(),
-          city: "Milwaukee", state: "WI", zip_code: "53202",
+          city: "", state: "", zip_code: "",
           is_gigger: accountType === "gigger", is_poster: accountType === "poster",
         });
         await Promise.all([
@@ -96,10 +96,9 @@ function AuthCallbackInner() {
     async function handleSession(session: { user: { id: string; email?: string } }) {
       if (redirected) return;
       redirected = true;
-      // Redirect IMMEDIATELY — don't wait for profile creation
+      // Create profile BEFORE redirecting so it exists when they land
+      await ensureProfileInBackground(session.user.id, session.user.email ?? "unknown");
       window.location.replace("/dashboard");
-      // Profile creation happens in background after redirect starts
-      ensureProfileInBackground(session.user.id, session.user.email ?? "unknown");
     }
 
     async function exchangeAndRedirect() {

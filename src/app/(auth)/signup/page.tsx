@@ -132,7 +132,7 @@ export default function SignupPage() {
             <Input
               id="firstName"
               label="First Name"
-              placeholder="Jevaun"
+              placeholder="First name"
               error={errors.firstName?.message}
               {...register("firstName")}
             />
