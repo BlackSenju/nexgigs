@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, useMemo } from "react";
 import { JobCard, type JobCardData } from "@/components/jobs/job-card";
 import { JobFilters } from "@/components/jobs/job-filters";
-import { MapPin, Search, Loader2, List, Map as MapIcon } from "lucide-react";
+import { MapPin, Search, Loader2, List, Map as MapIcon, Navigation } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { calculateDistance } from "@/lib/distance";
 
 const JobMap = lazy(() =>
   import("@/components/jobs/job-map").then((mod) => ({ default: mod.JobMap }))
@@ -19,6 +20,8 @@ export default function JobFeedPage() {
   const [userCity, setUserCity] = useState("Milwaukee");
   const [userState, setUserState] = useState("WI");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [sortNearMe, setSortNearMe] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -131,6 +134,39 @@ export default function JobFeedPage() {
     });
   }, []);
 
+  // Get user's geolocation for distance calculations
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => {
+        // User denied or geolocation unavailable — silently continue without distance
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }, []);
+
+  // Sort jobs by distance when "Near Me" is active
+  const displayJobs = useMemo(() => {
+    if (!sortNearMe || !userLocation) return jobs;
+    return [...jobs].sort((a, b) => {
+      const distA =
+        a.latitude != null && a.longitude != null
+          ? calculateDistance(userLocation.lat, userLocation.lng, a.latitude, a.longitude)
+          : Infinity;
+      const distB =
+        b.latitude != null && b.longitude != null
+          ? calculateDistance(userLocation.lat, userLocation.lng, b.latitude, b.longitude)
+          : Infinity;
+      return distA - distB;
+    });
+  }, [jobs, sortNearMe, userLocation]);
+
   return (
     <div className="px-4 py-4 max-w-2xl mx-auto">
       {/* Location header */}
@@ -146,6 +182,20 @@ export default function JobFeedPage() {
           <span className="text-xs text-zinc-500">
             {loading ? "..." : `${jobs.length} gigs`}
           </span>
+          {userLocation && (
+            <button
+              onClick={() => setSortNearMe((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors border",
+                sortNearMe
+                  ? "bg-brand-orange/10 text-brand-orange border-brand-orange/30"
+                  : "text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500"
+              )}
+            >
+              <Navigation className="w-3 h-3" />
+              Near Me
+            </button>
+          )}
           <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
             <button
               onClick={() => setViewMode("list")}
@@ -214,11 +264,16 @@ export default function JobFeedPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+          {displayJobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              userLat={userLocation?.lat}
+              userLon={userLocation?.lng}
+            />
           ))}
 
-          {jobs.length === 0 && (
+          {displayJobs.length === 0 && (
             <div className="py-12 text-center">
               <p className="text-zinc-500">
                 {searchQuery || selectedCategory !== "All"

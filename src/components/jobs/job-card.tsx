@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Clock, User, Star, Zap, Crown, Rocket, Building2 } from "lucide-react";
+import { MapPin, Clock, User, Star, Zap, Crown, Rocket, Building2, Navigation } from "lucide-react";
+import { calculateDistance, formatDistance } from "@/lib/distance";
 
 export interface JobCardData {
   id: string;
@@ -48,7 +49,17 @@ function formatPrice(job: JobCardData) {
   return "Open bid";
 }
 
-export function JobCard({ job }: { job: JobCardData }) {
+interface JobCardProps {
+  job: JobCardData;
+  userLat?: number;
+  userLon?: number;
+}
+
+export function JobCard({ job, userLat, userLon }: JobCardProps) {
+  const distance =
+    userLat != null && userLon != null && job.latitude != null && job.longitude != null
+      ? calculateDistance(userLat, userLon, job.latitude, job.longitude)
+      : null;
   return (
     <Link href={`/jobs/${job.id}`}>
       <div className="p-4 rounded-xl border border-zinc-800 bg-card hover:border-zinc-600 transition-all active:scale-[0.98]">
@@ -79,6 +90,12 @@ export function JobCard({ job }: { job: JobCardData }) {
             <MapPin className="w-3.5 h-3.5" />
             {job.neighborhood ? `${job.neighborhood}, ${job.city}` : job.city}
           </span>
+          {distance != null && (
+            <span className="flex items-center gap-0.5 text-[10px] text-zinc-500">
+              <Navigation className="w-2.5 h-2.5" />
+              {formatDistance(distance)}
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
             {job.duration_type}
