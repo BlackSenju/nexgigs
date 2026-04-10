@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InstallAndBeta } from "@/components/landing/install-and-beta";
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   "Home & Yard": <Home className="w-6 h-6" />,
@@ -69,6 +70,9 @@ export default async function LandingPage() {
       {/* Hero */}
       <section className="pt-32 pb-20 px-4">
         <div className="mx-auto max-w-4xl text-center">
+          <span className="inline-block text-xs font-medium text-brand-orange bg-brand-orange/10 px-3 py-1 rounded-full mb-6">
+            🚀 Beta Phase — Now Live in Milwaukee
+          </span>
           <h1 className="text-5xl sm:text-7xl font-black leading-tight">
             <span className="text-white">Your city.</span>{" "}
             <span className="text-gradient">Your skill.</span>{" "}
@@ -95,6 +99,17 @@ export default async function LandingPage() {
             <MapPin className="w-4 h-4" />
             <span>Launching in Milwaukee, WI</span>
           </div>
+          <p className="mt-4 text-xs text-zinc-600">
+            📱 The native app is in beta testing.{" "}
+            <a href="#install" className="text-brand-orange hover:underline">
+              Install the web app
+            </a>{" "}
+            or{" "}
+            <a href="#install" className="text-brand-orange hover:underline">
+              join the Android beta
+            </a>
+            .
+          </p>
         </div>
       </section>
 
@@ -174,6 +189,9 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Install App + Beta Tester Signup */}
+      <InstallAndBeta />
 
       {/* Join the Team — Coming Soon */}
       <section className="py-20 px-4 border-t border-zinc-800">
