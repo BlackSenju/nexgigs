@@ -15,18 +15,19 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
+  // Use maybeSingle so missing rows return null instead of erroring
   const { data: profile } = await supabase
     .from("nexgigs_profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   const [{ data: xp }, { data: sub }, onboarding] = await Promise.all([
     supabase
       .from("nexgigs_user_xp")
       .select("*")
       .eq("user_id", user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from("nexgigs_subscriptions")
       .select("tier")
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
-      .single(),
+      .maybeSingle(),
     getOnboardingStatus(),
   ]);
 

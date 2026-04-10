@@ -39,44 +39,51 @@ export default function MyProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+        setUserId(user.id);
 
-      const [profileRes, skillsRes, portfolioRes, xpRes, ratingRes, reviewsRes, shopRes, activeRes, completedRes, postedRes] = await Promise.all([
-        supabase.from("nexgigs_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("nexgigs_skills").select("*").eq("user_id", user.id),
-        supabase.from("nexgigs_portfolio").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("nexgigs_user_xp").select("*").eq("user_id", user.id).single(),
-        supabase.from("nexgigs_user_ratings").select("*").eq("user_id", user.id).single(),
-        supabase.from("nexgigs_ratings").select("*, rater:nexgigs_profiles!rater_id(first_name, last_initial)").eq("ratee_id", user.id).order("created_at", { ascending: false }).limit(20),
-        supabase.from("nexgigs_shop_items").select("*").eq("seller_id", user.id).eq("is_active", true),
-        supabase.from("nexgigs_hired_jobs").select("id", { count: "exact", head: true }).eq("gigger_id", user.id).eq("status", "active"),
-        supabase.from("nexgigs_hired_jobs").select("id", { count: "exact", head: true }).eq("gigger_id", user.id).eq("status", "completed"),
-        supabase.from("nexgigs_jobs").select("id", { count: "exact", head: true }).eq("poster_id", user.id),
-      ]);
+        // Use maybeSingle() so missing rows return null instead of erroring
+        const [profileRes, skillsRes, portfolioRes, xpRes, ratingRes, reviewsRes, shopRes, activeRes, completedRes, postedRes] = await Promise.all([
+          supabase.from("nexgigs_profiles").select("*").eq("id", user.id).maybeSingle(),
+          supabase.from("nexgigs_skills").select("*").eq("user_id", user.id),
+          supabase.from("nexgigs_portfolio").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+          supabase.from("nexgigs_user_xp").select("*").eq("user_id", user.id).maybeSingle(),
+          supabase.from("nexgigs_user_ratings").select("*").eq("user_id", user.id).maybeSingle(),
+          supabase.from("nexgigs_ratings").select("*, rater:nexgigs_profiles!rater_id(first_name, last_initial)").eq("ratee_id", user.id).order("created_at", { ascending: false }).limit(20),
+          supabase.from("nexgigs_shop_items").select("*").eq("seller_id", user.id).eq("is_active", true),
+          supabase.from("nexgigs_hired_jobs").select("id", { count: "exact", head: true }).eq("gigger_id", user.id).eq("status", "active"),
+          supabase.from("nexgigs_hired_jobs").select("id", { count: "exact", head: true }).eq("gigger_id", user.id).eq("status", "completed"),
+          supabase.from("nexgigs_jobs").select("id", { count: "exact", head: true }).eq("poster_id", user.id),
+        ]);
 
-      setProfile(profileRes.data);
-      setSkills(skillsRes.data ?? []);
-      setPortfolio(portfolioRes.data ?? []);
-      setXp(xpRes.data);
-      setRating(ratingRes.data);
-      setReviews(reviewsRes.data ?? []);
-      setShopItems(shopRes.data ?? []);
-      setGigCounts({ active: activeRes.count ?? 0, completed: completedRes.count ?? 0, posted: postedRes.count ?? 0 });
+        setProfile(profileRes.data);
+        setSkills(skillsRes.data ?? []);
+        setPortfolio(portfolioRes.data ?? []);
+        setXp(xpRes.data);
+        setRating(ratingRes.data);
+        setReviews(reviewsRes.data ?? []);
+        setShopItems(shopRes.data ?? []);
+        setGigCounts({ active: activeRes.count ?? 0, completed: completedRes.count ?? 0, posted: postedRes.count ?? 0 });
 
-      // Fetch subscription tier
-      const { data: sub } = await supabase
-        .from("nexgigs_subscriptions")
-        .select("tier")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .limit(1)
-        .single();
-      if (sub?.tier) setUserTier(sub.tier);
-
-      setLoading(false);
+        // Fetch subscription tier (maybeSingle so missing row is OK)
+        const { data: sub } = await supabase
+          .from("nexgigs_subscriptions")
+          .select("tier")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (sub?.tier) setUserTier(sub.tier);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);

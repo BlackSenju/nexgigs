@@ -68,36 +68,45 @@ export async function signup(input: SignupInput) {
     };
   }
 
-  // Create XP and ratings records (idempotent — ignore conflicts on existing rows)
+  // Create XP and ratings records — try insert, ignore if already exists
   await Promise.all([
     admin
       .from("nexgigs_user_xp")
-      .upsert({ user_id: data.user.id }, { onConflict: "user_id" }),
+      .insert({ user_id: data.user.id })
+      .then(() => null, () => null),
     admin
       .from("nexgigs_user_ratings")
-      .upsert({ user_id: data.user.id }, { onConflict: "user_id" }),
+      .insert({ user_id: data.user.id })
+      .then(() => null, () => null),
   ]);
 
-  // Fire-and-forget: notifications, email, audit log
-  Promise.all([
+  // AWAIT notifications BEFORE redirect — fire-and-forget doesn't work
+  // reliably in Next.js server actions because redirect() throws
+  // immediately and the function context is destroyed
+  await Promise.all([
     notifyDiscord("new_signup", {
       name: displayName,
       accountType: parsed.data.accountType,
       city: parsed.data.city,
       state: parsed.data.state.toUpperCase(),
-    }),
-    (() => {
-      const email = welcomeEmail(parsed.data.firstName, parsed.data.accountType);
-      return sendEmail(parsed.data.email, email.subject, email.html);
+    }).catch(() => null),
+    (async () => {
+      try {
+        const email = welcomeEmail(
+          parsed.data.firstName,
+          parsed.data.accountType
+        );
+        await sendEmail(parsed.data.email, email.subject, email.html);
+      } catch {
+        // Email failure shouldn't block signup
+      }
     })(),
     logAuditEvent(data.user.id, "auth.signup", "user", data.user.id, {
       accountType: parsed.data.accountType,
       city: parsed.data.city,
       state: parsed.data.state,
-    }),
-  ]).catch(() => {
-    // Notifications are non-critical — don't block signup
-  });
+    }).catch(() => null),
+  ]);
 
   redirect("/dashboard");
 }

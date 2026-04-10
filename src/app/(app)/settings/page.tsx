@@ -43,22 +43,28 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const [profileRes, skillsRes] = await Promise.all([
-        supabase.from("nexgigs_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("nexgigs_skills").select("*").eq("user_id", user.id),
-      ]);
-      setProfile(profileRes.data);
-      setSkills(skillsRes.data ?? []);
-      if (profileRes.data) {
-        setEditBio(String(profileRes.data.bio ?? ""));
-        setEditCity(String(profileRes.data.city ?? ""));
-        setEditState(String(profileRes.data.state ?? ""));
-        setEditNeighborhood(String(profileRes.data.neighborhood ?? ""));
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+        const [profileRes, skillsRes] = await Promise.all([
+          supabase.from("nexgigs_profiles").select("*").eq("id", user.id).maybeSingle(),
+          supabase.from("nexgigs_skills").select("*").eq("user_id", user.id),
+        ]);
+        setProfile(profileRes.data);
+        setSkills(skillsRes.data ?? []);
+        if (profileRes.data) {
+          setEditBio(String(profileRes.data.bio ?? ""));
+          setEditCity(String(profileRes.data.city ?? ""));
+          setEditState(String(profileRes.data.state ?? ""));
+          setEditNeighborhood(String(profileRes.data.neighborhood ?? ""));
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, []);
@@ -102,7 +108,21 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="max-w-lg mx-auto px-4 py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-500" /></div>;
-  if (!profile) return null;
+  if (!profile) return (
+    <div className="max-w-lg mx-auto px-4 py-20 text-center">
+      <h1 className="text-xl font-black text-white">Profile Not Found</h1>
+      <p className="mt-2 text-sm text-zinc-400">
+        We couldn&apos;t load your profile. Try logging out and back in,
+        or contact support if this keeps happening.
+      </p>
+      <button
+        onClick={handleLogout}
+        className="mt-4 text-xs text-brand-orange hover:underline"
+      >
+        Log out
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4">
