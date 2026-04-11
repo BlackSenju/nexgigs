@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Colors referenced from AndroidManifest.xml via android:resource="@color/..."
+        The androidbrowserhelper library calls ContextCompat.getColor() on these,
+        which requires a real resource ID — raw hex strings in android:value crash
+        at LauncherActivity.onCreate with Resources$NotFoundException.
+    -->
+    <color name="colorPrimary">#FF4D00</color>
+    <color name="navigationColor">#0A0A0A</color>
+    <color name="navigationColorDark">#0A0A0A</color>
+    <color name="navigationDividerColor">#0A0A0A</color>
+    <color name="navigationDividerColorDark">#0A0A0A</color>
+    <color name="backgroundColor">#0A0A0A</color>
+</resources>
