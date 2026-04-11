@@ -1,11 +1,11 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { applyToJob } from "@/lib/actions/jobs";
+import { applyToJob, deleteJob } from "@/lib/actions/jobs";
 import { trackJobView, trackViewDuration, toggleSaveJob, isJobSaved } from "@/lib/actions/analytics";
 import { Disclaimer } from "@/components/ui/disclaimer";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -26,22 +26,44 @@ import {
   CheckCircle,
   Loader2,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 export default function JobDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
   const [job, setJob] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
-  
+
   const [applied, setApplied] = useState(false);
   const [appliedBid, setAppliedBid] = useState<number | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [viewStart] = useState(Date.now());
+
+  async function handleDelete() {
+    if (!id || deleting) return;
+    if (
+      !confirm(
+        "Delete this job posting? This removes it from the jobs board and rejects any pending applications."
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    const result = await deleteJob(id as string);
+    if (result.error) {
+      alert(`Failed to delete: ${result.error}`);
+      setDeleting(false);
+      return;
+    }
+    router.push("/gigs");
+  }
 
   // Track view on mount
   useEffect(() => {
@@ -318,9 +340,28 @@ export default function JobDetailPage() {
                 <Sparkles className="w-4 h-4 mr-2" /> Find Me Someone Now
               </Button>
             </Link>
-            <Link href={`/jobs/${id}/applicants`}>
-              <Button variant="outline" size="sm" className="mt-2">View Applicants</Button>
+            <Link href={`/gigs/applicants?jobId=${id}`}>
+              <Button variant="outline" size="sm" className="w-full">
+                View Applicants
+              </Button>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-brand-red border-red-900 hover:bg-brand-red/10"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete Job
+                </>
+              )}
+            </Button>
           </div>
         ) : applied ? (
           <div className="p-4 rounded-xl bg-green-900/30 border border-green-700/50 text-center">

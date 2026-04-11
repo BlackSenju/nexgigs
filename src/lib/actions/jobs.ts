@@ -462,11 +462,12 @@ export async function getMyGigs() {
     .eq("gigger_id", user.id)
     .eq("status", "completed");
 
-  // Jobs I posted
+  // Jobs I posted (exclude soft-deleted)
   const { data: posted } = await supabase
     .from("nexgigs_jobs")
     .select("*, applications:nexgigs_applications(count)")
     .eq("poster_id", user.id)
+    .neq("status", "cancelled")
     .order("created_at", { ascending: false });
 
   return {
@@ -475,4 +476,71 @@ export async function getMyGigs() {
     completed: completed ?? [],
     posted: posted ?? [],
   };
+}
+
+/**
+ * Soft-delete a job posting. Only the poster can do this. Sets status
+ * to "cancelled" so the row is preserved for audit/analytics but no
+ * longer appears in listings, search, or the poster's own "My Gigs".
+ *
+ * Refuses to delete if the job has already been hired out (there is an
+ * active nexgigs_hired_jobs row) — cancelling mid-gig would break
+ * escrow/payment flows. In that case the poster should use the dispute
+ * flow instead.
+ */
+export async function deleteJob(jobId: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify ownership
+  const { data: job } = await supabase
+    .from("nexgigs_jobs")
+    .select("id, poster_id, title, status")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (!job) return { error: "Job not found" };
+  if (job.poster_id !== user.id) {
+    return { error: "You can only delete your own jobs" };
+  }
+  if (job.status === "cancelled") {
+    return { error: "Job is already deleted" };
+  }
+
+  // Refuse if there's an active hire on this job
+  const { data: activeHire } = await supabase
+    .from("nexgigs_hired_jobs")
+    .select("id")
+    .eq("job_id", jobId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (activeHire) {
+    return {
+      error:
+        "You can't delete a job someone has already been hired for. Use the dispute flow to cancel a hired gig.",
+    };
+  }
+
+  // Soft delete — set status to cancelled
+  const { error } = await supabase
+    .from("nexgigs_jobs")
+    .update({ status: "cancelled" })
+    .eq("id", jobId);
+
+  if (error) return { error: error.message };
+
+  // Reject any still-pending applications so giggers see the job is gone
+  await supabase
+    .from("nexgigs_applications")
+    .update({ status: "rejected" })
+    .eq("job_id", jobId)
+    .eq("status", "pending");
+
+  await logAuditEvent(user.id, "job.deleted", "job", jobId, {
+    title: job.title,
+  });
+
+  return { success: true };
 }

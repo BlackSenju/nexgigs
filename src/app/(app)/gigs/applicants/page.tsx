@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { acceptApplication, rejectApplication } from "@/lib/actions/applications";
 import { BackButton } from "@/components/ui/back-button";
@@ -78,11 +79,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function ApplicantManagementPage() {
+function ApplicantManagementPageInner() {
+  const searchParams = useSearchParams();
+  const jobIdFilter = searchParams.get("jobId");
+
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [filteredJobTitle, setFilteredJobTitle] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -96,14 +101,23 @@ export default function ApplicantManagementPage() {
       return;
     }
 
-    // Get all jobs posted by this user
-    const { data: jobs } = await supabase
+    // Get all jobs posted by this user (exclude soft-deleted) — optionally
+    // narrow to a single job when ?jobId= query param is present.
+    let jobsQuery = supabase
       .from("nexgigs_jobs")
       .select("id, title")
-      .eq("poster_id", user.id);
+      .eq("poster_id", user.id)
+      .neq("status", "cancelled");
+
+    if (jobIdFilter) {
+      jobsQuery = jobsQuery.eq("id", jobIdFilter);
+    }
+
+    const { data: jobs } = await jobsQuery;
 
     if (!jobs || jobs.length === 0) {
       setApplications([]);
+      setFilteredJobTitle(null);
       setLoading(false);
       return;
     }
@@ -112,6 +126,10 @@ export default function ApplicantManagementPage() {
       (jobs as JobRow[]).map((j) => [j.id, j.title])
     );
     const jobIds = jobs.map((j: JobRow) => j.id);
+
+    setFilteredJobTitle(
+      jobIdFilter && jobs.length === 1 ? (jobs[0] as JobRow).title : null
+    );
 
     // Get all applications for those jobs with gigger profile data
     const { data: apps } = await supabase
@@ -144,7 +162,7 @@ export default function ApplicantManagementPage() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, jobIdFilter]);
 
   async function handleAccept(applicationId: string, jobId: string) {
     setActionLoading(applicationId);
@@ -219,9 +237,13 @@ export default function ApplicantManagementPage() {
       <BackButton fallbackHref="/dashboard" />
 
       {/* Header */}
-      <h1 className="text-2xl font-black text-white">Applicant Management</h1>
+      <h1 className="text-2xl font-black text-white">
+        {filteredJobTitle ? "Applicants" : "Applicant Management"}
+      </h1>
       <p className="text-sm text-zinc-400 mt-1">
-        Review and manage applications across all your posted jobs.
+        {filteredJobTitle
+          ? `Applications for "${filteredJobTitle}"`
+          : "Review and manage applications across all your posted jobs."}
       </p>
 
       {/* Stats Row */}
@@ -373,5 +395,23 @@ export default function ApplicantManagementPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function ApplicantManagementPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <BackButton fallbackHref="/dashboard" />
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 text-brand-orange animate-spin" />
+            <span className="ml-2 text-zinc-400">Loading applicants...</span>
+          </div>
+        </div>
+      }
+    >
+      <ApplicantManagementPageInner />
+    </Suspense>
   );
 }
