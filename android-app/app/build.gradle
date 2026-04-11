@@ -10,16 +10,19 @@ android {
         applicationId "com.nexgigs.app"
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 8
+        versionName "1.0.4"
 
         manifestPlaceholders = [
             hostName: "nexgigs.com",
             defaultUrl: "https://nexgigs.com/dashboard",
             launcherName: "NexGigs",
-            assetStatements: '[{"relation": ["delegate_permission/common.handle_all_urls"],' +
-                '"target": {"namespace": "android_app", "package_name": "com.nexgigs.app",' +
-                '"sha256_cert_fingerprints": ["2D:FE:7A:9B:16:BE:4E:A6:A4:F1:AA:B0:02:0E:C0:B7:F2:37:8A:0F:10:D8:8C:F7:83:7B:1A:B6:AF:30:82:C0"]}}]'
+            // Android manifest asset_statements tells Android that THIS APP
+            // trusts the nexgigs.com website. Must use namespace="web".
+            // The inverse statement (website trusts app) lives in
+            // /.well-known/assetlinks.json on the site.
+            assetStatements: '[{"relation": ["delegate_permission/common.handle_all_urls"], ' +
+                '"target": {"namespace": "web", "site": "https://nexgigs.com"}}]'
         ]
     }
 
@@ -35,8 +38,12 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            // Minification disabled on purpose — this is a tiny TWA wrapper
+            // (~150KB) and R8 was stripping classes that the AndroidManifest
+            // references reflectively, causing startup crashes on fresh
+            // installs. Size savings are not worth the launch risk.
+            minifyEnabled false
+            shrinkResources false
         }
         debug {
             signingConfig signingConfigs.release
@@ -50,5 +57,8 @@ android {
 }
 
 dependencies {
+    // Pinned to 2.5.0 — versions 2.6.0+ transitively pull
+    // androidx.browser:1.9.0-alpha04 which requires compileSdk 36 and
+    // Android Gradle Plugin 8.9.1+. Upgrade when bumping AGP.
     implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
 }

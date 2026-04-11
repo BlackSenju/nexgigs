@@ -24,8 +24,8 @@
     "path": "./nexgigs.keystore",
     "alias": "nexgigs"
   },
-  "appVersionCode": 1,
-  "appVersion": "1.0.0",
+  "appVersionCode": 8,
+  "appVersion": "1.0.4",
   "splashScreenFadeOutDuration": 300,
   "fallbackType": "customtabs",
   "features": {
