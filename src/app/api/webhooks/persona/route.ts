@@ -2,19 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
+import { verifyPersonaWebhook } from "@/lib/persona";
+
+export const runtime = "nodejs";
 
 /**
  * POST /api/webhooks/persona
  * Handles Persona verification webhooks.
+ *
+ * Security: requires a valid `Persona-Signature` header (HMAC-SHA256 of
+ * `<timestamp>.<raw-body>` keyed by PERSONA_WEBHOOK_SECRET). Without this,
+ * anyone could POST a forged `inquiry.completed` event and instantly grant
+ * themselves identity_verified status.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
+  const signature = request.headers.get("persona-signature");
 
-  // In production, verify webhook signature
-  // const signature = request.headers.get("persona-signature") ?? "";
-  // if (!verifyPersonaWebhook(body, signature)) {
-  //   return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  // }
+  const valid = await verifyPersonaWebhook(body, signature);
+  if (!valid) {
+    await notifyDiscord("security_alert", {
+      message: "Persona webhook signature verification failed",
+      ip: request.headers.get("x-forwarded-for") ?? "unknown",
+    }).catch(() => {});
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
   let event;
   try {
@@ -84,8 +96,8 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Webhook processing failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[webhooks/persona] handler error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
