@@ -72,6 +72,32 @@ export async function createBackgroundCheck(input: {
 }
 
 /**
+ * Verify a Checkr webhook signature.
+ *
+ * Checkr signs webhooks using HMAC-SHA256 of the raw request body
+ * with your `CHECKR_WEBHOOK_SECRET`. The hex digest is sent in the
+ * `X-Checkr-Signature` header.
+ *
+ * Reference: https://docs.checkr.com/#tag/Webhooks
+ */
+export async function verifyCheckrWebhook(
+  rawBody: string,
+  signature: string | null
+): Promise<boolean> {
+  const secret = process.env.CHECKR_WEBHOOK_SECRET;
+  if (!secret || !signature) return false;
+
+  const { createHmac, timingSafeEqual } = await import("crypto");
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+
+  // Constant-time comparison; bail out on length mismatch first to avoid throw
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/**
  * Get the status of a background check report.
  */
 export async function getCheckrReport(reportId: string): Promise<{
