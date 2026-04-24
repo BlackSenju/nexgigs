@@ -85,22 +85,44 @@ export async function getPersonaInquiry(inquiryId: string): Promise<{
 
 /**
  * Verify a Persona webhook signature.
+ *
+ * Persona sends the signature header as `t=<unix-seconds>,v1=<hex-hmac>`.
+ * The HMAC is SHA-256 of `<timestamp>.<raw-body>` keyed by
+ * `PERSONA_WEBHOOK_SECRET`. We compare in constant time.
+ *
+ * Reference: https://docs.withpersona.com/docs/webhooks#verifying-webhooks
  */
 export async function verifyPersonaWebhook(
   payload: string,
-  signature: string
+  header: string | null
 ): Promise<boolean> {
   const secret = process.env.PERSONA_WEBHOOK_SECRET;
-  if (!secret) return false;
+  if (!secret || !header) return false;
 
-  // Persona uses HMAC-SHA256
+  // Parse `t=...,v1=...` (order-independent; ignore unknown segments)
+  const parts = header.split(",").map((s) => s.trim());
+  let timestamp: string | null = null;
+  let v1: string | null = null;
+  for (const part of parts) {
+    const [k, v] = part.split("=", 2);
+    if (k === "t") timestamp = v ?? null;
+    if (k === "v1") v1 = v ?? null;
+  }
+  if (!timestamp || !v1) return false;
+
+  // Reject signatures older than 5 minutes to limit replay window
+  const ageSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
+  if (!Number.isFinite(ageSeconds) || ageSeconds > 300 || ageSeconds < -60) {
+    return false;
+  }
+
   const { createHmac, timingSafeEqual } = await import("crypto");
   const expected = createHmac("sha256", secret)
-    .update(payload)
+    .update(`${timestamp}.${payload}`)
     .digest("hex");
 
-  return timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  const a = Buffer.from(expected);
+  const b = Buffer.from(v1);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
