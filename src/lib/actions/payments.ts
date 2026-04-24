@@ -149,7 +149,7 @@ export async function hireGigger(input: {
       .eq("status", "pending");
 
     // Get job title for notifications
-    const { data: job } = await supabase
+    const { data: jobForNotif } = await supabase
       .from("nexgigs_jobs")
       .select("title")
       .eq("id", input.jobId)
@@ -159,7 +159,7 @@ export async function hireGigger(input: {
     Promise.all([
       notifyDiscord("payment_received", {
         amount: fees.posterPays,
-        jobTitle: job?.title ?? "Unknown",
+        jobTitle: jobForNotif?.title ?? "Unknown",
         poster: `${poster.first_name} ${poster.last_initial}.`,
       }),
       logAuditEvent(user.id, "job.hired", "hired_job", hiredJob.id, {
