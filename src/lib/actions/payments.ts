@@ -27,6 +27,33 @@ export async function hireGigger(input: {
 
   if (!user) return { error: "Not authenticated" };
 
+  // Validate caller-supplied agreedPrice. Without bounds a malicious client
+  // can submit absurd values which flow through to Stripe authorization.
+  // $0.50 floor matches Stripe's minimum charge; $50,000 ceiling is a sane
+  // upper bound for a single gig and can be relaxed later if needed.
+  if (
+    !Number.isFinite(input.agreedPrice) ||
+    input.agreedPrice < 0.5 ||
+    input.agreedPrice > 50000
+  ) {
+    return { error: "Invalid price" };
+  }
+
+  // Verify the caller actually owns this job and that the job is still open
+  // BEFORE we touch Stripe. Otherwise an authenticated user could authorize
+  // a payment intent against another user's gigger by passing an arbitrary
+  // jobId — Supabase RLS would catch the later insert, but Stripe's
+  // authorize-then-cancel cycle would already have happened.
+  const { data: job } = await supabase
+    .from("nexgigs_jobs")
+    .select("id, poster_id, status")
+    .eq("id", input.jobId)
+    .maybeSingle();
+
+  if (!job) return { error: "Job not found" };
+  if (job.poster_id !== user.id) return { error: "You can only hire on your own jobs" };
+  if (job.status !== "open") return { error: "Job is not available to hire on" };
+
   // Get poster profile (for Stripe customer)
   const { data: poster } = await supabase
     .from("nexgigs_profiles")
