@@ -99,16 +99,18 @@ export async function verifyPersonaWebhook(
   const secret = process.env.PERSONA_WEBHOOK_SECRET;
   if (!secret || !header) return false;
 
-  // Parse `t=...,v1=...` (order-independent; ignore unknown segments)
-  const parts = header.split(",").map((s) => s.trim());
+  // Persona's header format:
+  //   single sig:  `t=<unix>,v1=<hex>`
+  //   during rotation: `t=<unix>,v1=<hex> v1=<hex>` (space-separated)
+  // We need to accept ANY matching v1 to support zero-downtime secret rotation.
   let timestamp: string | null = null;
-  let v1: string | null = null;
-  for (const part of parts) {
-    const [k, v] = part.split("=", 2);
-    if (k === "t") timestamp = v ?? null;
-    if (k === "v1") v1 = v ?? null;
+  const v1Sigs: string[] = [];
+  for (const segment of header.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean)) {
+    const [k, v] = segment.split("=", 2);
+    if (k === "t" && !timestamp) timestamp = v ?? null;
+    if (k === "v1" && v) v1Sigs.push(v);
   }
-  if (!timestamp || !v1) return false;
+  if (!timestamp || v1Sigs.length === 0) return false;
 
   // Reject signatures older than 5 minutes to limit replay window
   const ageSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
@@ -120,9 +122,11 @@ export async function verifyPersonaWebhook(
   const expected = createHmac("sha256", secret)
     .update(`${timestamp}.${payload}`)
     .digest("hex");
+  const expectedBuf = Buffer.from(expected);
 
-  const a = Buffer.from(expected);
-  const b = Buffer.from(v1);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
+  return v1Sigs.some((sig) => {
+    const sigBuf = Buffer.from(sig);
+    if (sigBuf.length !== expectedBuf.length) return false;
+    return timingSafeEqual(expectedBuf, sigBuf);
+  });
 }
