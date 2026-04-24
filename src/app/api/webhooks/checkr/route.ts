@@ -2,19 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyDiscord } from "@/lib/discord";
 import { logAuditEvent } from "@/lib/audit";
+import { verifyCheckrWebhook } from "@/lib/checkr";
+
+export const runtime = "nodejs";
 
 /**
  * POST /api/webhooks/checkr
  * Handles Checkr background check webhooks.
+ *
+ * Security: requires a valid `X-Checkr-Signature` header (HMAC-SHA256 of the
+ * raw body using `CHECKR_WEBHOOK_SECRET`). Without this, anyone could grant
+ * themselves "Verified Pro" status by POSTing a forged event.
  */
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  // Read raw body BEFORE parsing — signature is computed over the raw bytes.
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-checkr-signature");
 
-  const eventType = body.type;
-  const reportId = body.data?.object?.id;
-  const candidateId = body.data?.object?.candidate_id;
-  const status = body.data?.object?.status;
-  const result = body.data?.object?.result;
+  const valid = await verifyCheckrWebhook(rawBody, signature);
+  if (!valid) {
+    await notifyDiscord("security_alert", {
+      message: "Checkr webhook signature verification failed",
+      ip: request.headers.get("x-forwarded-for") ?? "unknown",
+    }).catch(() => {});
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const eventType = body.type as string | undefined;
+  const dataObject = (body.data as { object?: Record<string, unknown> })?.object ?? {};
+  const reportId = dataObject.id as string | undefined;
+  const candidateId = dataObject.candidate_id as string | undefined;
+  const status = dataObject.status as string | undefined;
+  const result = dataObject.result as string | undefined;
 
   const supabase = createAdminClient();
 
@@ -68,8 +94,9 @@ export async function POST(request: NextRequest) {
         .eq("checkr_candidate_id", candidateId);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Webhook failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Log internally but never leak the underlying error message to the caller.
+    console.error("[webhooks/checkr] handler error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
