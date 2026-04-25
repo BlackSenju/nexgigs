@@ -369,6 +369,15 @@ export async function applyToJob(
  * Helper: fetch the poster's email + applicant's rating/stats and send
  * the "new application" email. Uses the admin client since auth.users
  * is not accessible via the user-scoped client.
+ *
+ * SECURITY CONTRACT — keep this READ-ONLY.
+ * The admin client bypasses Supabase RLS. The only caller of this helper
+ * (submitApplication) has already verified the calling user via the
+ * user-scoped client and successfully created an application row, which
+ * implicitly grants legitimate access to read the poster's contact info.
+ * Do NOT add any admin-client INSERT/UPDATE/DELETE here — every write
+ * must go through the user-scoped supabase client so RLS stays in the
+ * loop.
  */
 async function sendPosterApplicationEmail(input: {
   posterId: string;
