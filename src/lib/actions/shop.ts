@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { moderateShopItem } from "@/lib/moderation";
 import { logAuditEvent } from "@/lib/audit";
 import { notifyDiscord } from "@/lib/discord";
+import { sanitizeOrSearch, clampLimit } from "@/lib/postgrest";
 
 export type ListingType = "product" | "digital" | "service" | "experience" | "subscription";
 
@@ -160,9 +161,14 @@ export async function getShopListings(filters?: {
   if (filters?.category) query = query.eq("category", filters.category);
   if (filters?.listingType) query = query.eq("listing_type", filters.listingType);
   if (filters?.sellerId) query = query.eq("seller_id", filters.sellerId);
-  if (filters?.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-  if (filters?.limit) query = query.limit(filters.limit);
-  else query = query.limit(50);
+  if (filters?.search) {
+    // Same sanitization as getJobs — strip PostgREST `or()` control chars.
+    const safe = sanitizeOrSearch(filters.search);
+    if (safe.length > 0) {
+      query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+    }
+  }
+  query = query.limit(clampLimit(filters?.limit));
 
   const { data } = await query;
   return data ?? [];

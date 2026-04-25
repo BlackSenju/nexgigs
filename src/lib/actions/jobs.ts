@@ -9,6 +9,7 @@ import { geocodeAddress } from "@/lib/geocode";
 import { sendNotification } from "@/lib/actions/notifications";
 import { sendEmail, newApplicationEmail, jobPostedEmail } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeOrSearch, sanitizeIlike, clampLimit } from "@/lib/postgrest";
 
 export async function getJobs(filters?: {
   category?: string;
@@ -36,32 +37,20 @@ export async function getJobs(filters?: {
     query = query.eq("category", filters.category);
   }
   if (filters?.city) {
-    query = query.ilike("city", `%${filters.city}%`);
+    // Escape `%` and `_` wildcards so a caller cannot widen the match.
+    const safeCity = sanitizeIlike(filters.city);
+    if (safeCity.length > 0) query = query.ilike("city", `%${safeCity}%`);
   }
   if (filters?.state) {
     query = query.eq("state", filters.state.toUpperCase());
   }
   if (filters?.search) {
-    // Sanitize before interpolating into a PostgREST `or()` filter string.
-    // PostgREST treats `,`, `(`, `)`, and `:` as control characters inside
-    // these expressions; without scrubbing them an attacker could escape the
-    // `or()` clause and inject additional filter conditions (e.g. dropping
-    // the `status='open'` constraint to reveal cancelled or hidden jobs).
-    // We also cap length so a giant search string can't blow up the URL.
-    const safe = filters.search
-      .replace(/[(),:*\\]/g, " ")
-      .trim()
-      .slice(0, 100);
+    const safe = sanitizeOrSearch(filters.search);
     if (safe.length > 0) {
       query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
     }
   }
-  // Cap caller-controlled limit to prevent dumping the entire jobs table.
-  const requestedLimit =
-    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
-      ? Math.min(Math.floor(filters.limit), 100)
-      : 50;
-  query = query.limit(requestedLimit);
+  query = query.limit(clampLimit(filters?.limit));
 
   const { data, error } = await query;
   if (error) return { jobs: [], error: error.message };
