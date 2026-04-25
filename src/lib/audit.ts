@@ -37,6 +37,9 @@ type AuditAction =
   | "shop.reward_redeemed"
   | "subscription.upgraded"
   | "subscription.cancelled"
+  | "storefront.draft_created"
+  | "storefront.published"
+  | "storefront.unpublished"
   | "admin.action";
 
 export async function logAuditEvent(
