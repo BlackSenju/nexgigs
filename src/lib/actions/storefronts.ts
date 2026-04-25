@@ -134,6 +134,74 @@ export async function getStorefrontBySlug(slug: string): Promise<{
   return { storefront: (data as Storefront | null) ?? null };
 }
 
+export interface StorefrontPublicView {
+  storefront: Storefront;
+  businessName: string;
+  packages: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    price: number;
+    listing_type: string | null;
+    recurring_interval: string | null;
+  }>;
+}
+
+/**
+ * Bundles everything the public `/store/<slug>` page needs in one round-trip:
+ * the storefront row, the owner's `business_name` (or fallback display name),
+ * and their active shop listings to render in the Packages section.
+ *
+ * All reads go through the user-scoped client and rely on existing RLS
+ * (storefronts: published-public; profiles + shop_items: public read). No
+ * service-role bypass needed — this lets anonymous visitors render the page.
+ */
+export async function getStorefrontPublicView(slug: string): Promise<{
+  view: StorefrontPublicView | null;
+  error?: string;
+}> {
+  const { storefront, error } = await getStorefrontBySlug(slug);
+  if (error) return { view: null, error };
+  if (!storefront) return { view: null };
+
+  const supabase = createClient();
+
+  const [{ data: profile }, { data: items }] = await Promise.all([
+    supabase
+      .from("nexgigs_profiles")
+      .select("first_name, last_initial, business_name")
+      .eq("id", storefront.user_id)
+      .maybeSingle(),
+    supabase
+      .from("nexgigs_shop_items")
+      .select("id, title, description, price, listing_type, recurring_interval")
+      .eq("seller_id", storefront.user_id)
+      .eq("is_active", true)
+      .order("price", { ascending: true })
+      .limit(12),
+  ]);
+
+  const businessName =
+    profile?.business_name ||
+    `${profile?.first_name ?? ""} ${profile?.last_initial ?? ""}`.trim() ||
+    "Local Business";
+
+  return {
+    view: {
+      storefront,
+      businessName,
+      packages: (items ?? []).map((row) => ({
+        id: String(row.id),
+        title: String(row.title),
+        description: row.description as string | null,
+        price: Number(row.price),
+        listing_type: row.listing_type as string | null,
+        recurring_interval: row.recurring_interval as string | null,
+      })),
+    },
+  };
+}
+
 /**
  * Check if a slug is available. Reserved slugs and existing rows both count
  * as taken. Validation errors return `{ available: false, reason }`.
@@ -491,5 +559,5 @@ function sanitizeSocialLinks(input: SocialLinks): SocialLinks {
   };
 }
 
-// Re-export the slug helper so callers only need one import.
-export { normalizeSlug } from "@/lib/storefront-slug";
+// Note: import normalizeSlug directly from "@/lib/storefront-slug" if needed
+// — "use server" files cannot re-export sync values.
