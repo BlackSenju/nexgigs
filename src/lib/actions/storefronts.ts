@@ -6,7 +6,6 @@ import { logAuditEvent } from "@/lib/audit";
 import { notifyDiscord } from "@/lib/discord";
 import {
   validateSlug,
-  normalizeSlug,
   suggestAvailableSlug,
 } from "@/lib/storefront-slug";
 
