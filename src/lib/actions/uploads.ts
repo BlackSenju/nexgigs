@@ -77,6 +77,25 @@ export async function uploadPortfolioItem(formData: FormData) {
   const maxSize = 10 * 1024 * 1024; // 10MB
   if (file.size > maxSize) return { error: "File must be under 10MB" };
 
+  // MIME allowlist — without this, a user could upload `.html`, `.svg`, or
+  // `.js` files and Supabase Storage would serve them with their original
+  // content-type, turning the portfolio bucket into a stored-XSS host on
+  // a *.supabase.co origin.
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      error: "Only JPEG, PNG, WebP, GIF images and MP4/WebM/MOV videos are allowed",
+    };
+  }
+
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${user.id}/${timestamp}_${safeName}`;
