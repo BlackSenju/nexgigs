@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles } from "lucide-react";
+import { MapPin, Briefcase, Star, Zap, ShoppingBag, Award, Users, Bookmark, BarChart3, FileText, Sparkles, Store } from "lucide-react";
 import { EarningsTracker } from "@/components/earnings/earnings-tracker";
 import { getOnboardingStatus } from "@/lib/actions/onboarding";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
@@ -225,6 +225,18 @@ export default async function DashboardPage() {
             <ShoppingBag className="w-5 h-5 text-brand-orange mb-2" />
             <h3 className="text-sm font-bold text-white">Shop</h3>
             <p className="mt-0.5 text-xs text-zinc-400">Buy and sell products & services</p>
+          </div>
+        </Link>
+        <Link href="/dashboard/storefront">
+          <div className="p-4 rounded-xl border border-brand-orange/40 bg-gradient-to-br from-brand-orange/10 to-card hover:border-brand-orange transition-colors cursor-pointer relative">
+            <Store className="w-5 h-5 text-brand-orange mb-2" />
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-white">My Storefront</h3>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-orange/20 text-brand-orange font-bold border border-brand-orange/30">
+                NEW
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-zinc-400">Build your branded business page</p>
           </div>
         </Link>
         <Link href="/rewards">
