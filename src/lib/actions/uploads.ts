@@ -81,6 +81,18 @@ export async function uploadPortfolioItem(formData: FormData) {
   // `.js` files and Supabase Storage would serve them with their original
   // content-type, turning the portfolio bucket into a stored-XSS host on
   // a *.supabase.co origin.
+  //
+  // SECURITY NOTE: `file.type` is set by the browser/client and is NOT
+  // authoritative — a malicious client can lie about the content-type.
+  // This check is a UX guard plus first line of defense. The authoritative
+  // enforcement must live at the Supabase Storage layer: configure the
+  // `portfolio` bucket with an `allowed_mime_types` allowlist matching the
+  // list below. With both layers in place a forged `file.type` either gets
+  // rejected here OR rejected by Storage on upload; defense in depth.
+  //
+  // PDF intentionally NOT in this list: while application/pdf is generally
+  // safe to render (browsers display inline, no script execution), portfolios
+  // are media-first. Re-evaluate if real users ask for it.
   const allowedTypes = [
     "image/jpeg",
     "image/png",
