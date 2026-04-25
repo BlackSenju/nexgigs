@@ -158,11 +158,11 @@ function ApplicantManagementPageInner() {
 
     setApplications(enriched);
     setLoading(false);
-  }, []);
+  }, [jobIdFilter]);
 
   useEffect(() => {
     loadData();
-  }, [loadData, jobIdFilter]);
+  }, [loadData]);
 
   async function handleAccept(applicationId: string, jobId: string) {
     setActionLoading(applicationId);
