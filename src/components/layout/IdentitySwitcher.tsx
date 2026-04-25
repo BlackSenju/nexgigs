@@ -105,17 +105,19 @@ export function IdentitySwitcher({ personalLabel }: IdentitySwitcherProps) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={busy}
-        className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-white max-w-[180px]"
+        data-testid="identity-switcher"
+        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-brand-orange/40 bg-brand-orange/10 hover:bg-brand-orange/20 hover:ring-brand-orange/60 text-white max-w-[200px] transition-colors"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label="Switch identity"
       >
         {active.kind === "business" ? (
           <Building2 className="w-3.5 h-3.5 text-brand-orange shrink-0" />
         ) : (
-          <UserIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <UserIcon className="w-3.5 h-3.5 text-brand-orange shrink-0" />
         )}
         <span className="truncate">{activeLabel}</span>
-        <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 text-brand-orange shrink-0" />
       </button>
 
       {open && (
