@@ -169,6 +169,14 @@ export async function sendMessage(conversationId: string, content: string) {
  * message in this conversation in the last 2 hours (proxy for "they're
  * not actively looking at the app"). Uses the admin client to read the
  * recipient's email from auth.users.
+ *
+ * SECURITY CONTRACT — keep this READ-ONLY.
+ * The admin client bypasses Supabase RLS. The only callers of this
+ * helper (sendMessage above) have already verified the calling user is
+ * a participant in the conversation, so reading the OTHER participant's
+ * email is legitimate. Do NOT add any admin-client INSERT/UPDATE/DELETE
+ * here — every write must go through the user-scoped supabase client so
+ * RLS stays in the loop.
  */
 async function sendNewMessageEmail(input: {
   senderUserId: string;

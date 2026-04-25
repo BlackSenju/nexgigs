@@ -9,6 +9,7 @@ import { geocodeAddress } from "@/lib/geocode";
 import { sendNotification } from "@/lib/actions/notifications";
 import { sendEmail, newApplicationEmail, jobPostedEmail } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeOrSearch, sanitizeIlike, clampLimit } from "@/lib/postgrest";
 
 export async function getJobs(filters?: {
   category?: string;
@@ -36,21 +37,20 @@ export async function getJobs(filters?: {
     query = query.eq("category", filters.category);
   }
   if (filters?.city) {
-    query = query.ilike("city", `%${filters.city}%`);
+    // Escape `%` and `_` wildcards so a caller cannot widen the match.
+    const safeCity = sanitizeIlike(filters.city);
+    if (safeCity.length > 0) query = query.ilike("city", `%${safeCity}%`);
   }
   if (filters?.state) {
     query = query.eq("state", filters.state.toUpperCase());
   }
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
-    );
+    const safe = sanitizeOrSearch(filters.search);
+    if (safe.length > 0) {
+      query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+    }
   }
-  if (filters?.limit) {
-    query = query.limit(filters.limit);
-  } else {
-    query = query.limit(50);
-  }
+  query = query.limit(clampLimit(filters?.limit));
 
   const { data, error } = await query;
   if (error) return { jobs: [], error: error.message };
@@ -358,6 +358,15 @@ export async function applyToJob(
  * Helper: fetch the poster's email + applicant's rating/stats and send
  * the "new application" email. Uses the admin client since auth.users
  * is not accessible via the user-scoped client.
+ *
+ * SECURITY CONTRACT — keep this READ-ONLY.
+ * The admin client bypasses Supabase RLS. The only caller of this helper
+ * (submitApplication) has already verified the calling user via the
+ * user-scoped client and successfully created an application row, which
+ * implicitly grants legitimate access to read the poster's contact info.
+ * Do NOT add any admin-client INSERT/UPDATE/DELETE here — every write
+ * must go through the user-scoped supabase client so RLS stays in the
+ * loop.
  */
 async function sendPosterApplicationEmail(input: {
   posterId: string;
