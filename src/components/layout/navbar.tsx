@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { LogOut, Bell } from "lucide-react";
 import { getUnreadCount } from "@/lib/actions/notifications";
+import { IdentitySwitcher } from "@/components/layout/IdentitySwitcher";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function Navbar() {
@@ -90,6 +91,13 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
+                <IdentitySwitcher
+                  personalLabel={
+                    profile?.first_name
+                      ? `${profile.first_name} ${profile.last_initial ?? ""}.`
+                      : "Me"
+                  }
+                />
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">
                     Dashboard
