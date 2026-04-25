@@ -206,18 +206,21 @@ export default function BusinessProfilePage() {
               )}
             </div>
 
-            {profile.business_website && safeWebsiteHref(profile.business_website) && (
-              <a
-                href={safeWebsiteHref(profile.business_website)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-brand-orange hover:underline mt-1"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                Website
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+            {(() => {
+              const websiteHref = safeWebsiteHref(profile.business_website);
+              return websiteHref ? (
+                <a
+                  href={websiteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-brand-orange hover:underline mt-1"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  Website
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : null;
+            })()}
           </div>
         </div>
 
