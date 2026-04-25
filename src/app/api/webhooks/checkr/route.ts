@@ -11,8 +11,10 @@ export const runtime = "nodejs";
  * Handles Checkr background check webhooks.
  *
  * Security: requires a valid `X-Checkr-Signature` header (HMAC-SHA256 of the
- * raw body using `CHECKR_WEBHOOK_SECRET`). Without this, anyone could grant
- * themselves "Verified Pro" status by POSTing a forged event.
+ * raw body, keyed by `CHECKR_API_KEY` per Checkr's docs — Checkr uses the
+ * same API key for HMAC signing rather than a separate webhook secret).
+ * Without this, anyone could grant themselves "Verified Pro" status by
+ * POSTing a forged event.
  */
 export async function POST(request: NextRequest) {
   // Read raw body BEFORE parsing — signature is computed over the raw bytes.
