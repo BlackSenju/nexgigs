@@ -19,6 +19,7 @@ import {
   unpublishStorefront,
 } from "@/lib/actions/storefronts";
 import { STOREFRONT_ICON_OPTIONS } from "@/components/storefront/StorefrontLogo";
+import { AIImproveButton } from "@/components/storefront/AIImproveButton";
 import * as Lucide from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -179,6 +180,14 @@ export function StorefrontEditor({ initialStorefront }: StorefrontEditorProps) {
           <div className="flex items-center gap-2">
             <SaveIndicator state={saveState} error={saveError} />
             <Link
+              href="/dashboard/storefront/wizard"
+              className="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold bg-brand-orange/10 text-brand-orange ring-1 ring-brand-orange/30 hover:bg-brand-orange/20"
+              title="Run the AI Setup Wizard"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              AI Wizard
+            </Link>
+            <Link
               href={`/store/${storefront.slug}`}
               target="_blank"
               className="hidden sm:inline-flex items-center gap-1 text-sm text-zinc-300 hover:text-white"
@@ -239,6 +248,13 @@ export function StorefrontEditor({ initialStorefront }: StorefrontEditorProps) {
                 maxLength={200}
                 className={inputCls}
               />
+              <div className="mt-1.5">
+                <AIImproveButton
+                  field="tagline"
+                  current={form.tagline}
+                  onAccept={(v) => set("tagline", v.slice(0, 200))}
+                />
+              </div>
             </Field>
 
             <Field label="Brand color" hint="Used for buttons, accents, and your logo tile.">
@@ -316,8 +332,15 @@ export function StorefrontEditor({ initialStorefront }: StorefrontEditorProps) {
                 placeholder="<p>Tell your story…</p>"
                 className={inputCls + " font-mono text-sm leading-relaxed resize-y"}
               />
-              <div className="mt-1 text-xs text-zinc-500 text-right">
-                {form.about_html.length}/5000
+              <div className="flex items-center justify-between mt-1.5">
+                <AIImproveButton
+                  field="about_html"
+                  current={form.about_html}
+                  onAccept={(v) => set("about_html", v.slice(0, 5000))}
+                />
+                <div className="text-xs text-zinc-500">
+                  {form.about_html.length}/5000
+                </div>
               </div>
             </Field>
           </Section>
