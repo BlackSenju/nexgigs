@@ -497,6 +497,150 @@ export async function publishStorefront(): Promise<{
 }
 
 /**
+ * Apply an AI-generated draft to the user's storefront. Validates and writes
+ * the AI fields in one transaction, sets ai_drafted_at, and optionally
+ * creates the suggested shop listings as `nexgigs_shop_items` rows.
+ *
+ * Idempotent — calling twice with the same draft just overwrites the same
+ * fields. Caller can decide whether to also create shop listings via the
+ * `createListings` flag (default true on first run, false on subsequent
+ * "regenerate" calls so we don't duplicate listings).
+ */
+export interface ApplyAiDraftInput {
+  draft: {
+    business_name: string;
+    tagline: string;
+    about_html: string;
+    industry: StorefrontIndustry;
+    brand_color: string;
+    accent_color?: string | null;
+    suggested_packages: Array<{
+      title: string;
+      price: number;
+      description: string;
+      listing_type: "product" | "digital" | "service" | "experience" | "subscription";
+      recurring_interval?: string | null;
+    }>;
+    how_it_works: HowItWorksStep[];
+    faqs: Faq[];
+    service_areas: string[];
+  };
+  createListings?: boolean;
+}
+
+export async function applyAiDraft(input: ApplyAiDraftInput): Promise<{
+  storefront?: Storefront;
+  listingsCreated?: number;
+  error?: string;
+}> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const me = await getMyStorefront();
+  if (!me.storefront) return { error: "No storefront — create a draft first" };
+
+  // Patch storefront fields. We deliberately do NOT touch slug, status,
+  // photo_gallery, or social_links — those stay whatever the seller has
+  // already configured.
+  const { data, error } = await supabase
+    .from("nexgigs_storefronts")
+    .update({
+      industry: input.draft.industry,
+      brand_color: input.draft.brand_color.toLowerCase(),
+      accent_color: input.draft.accent_color?.toLowerCase() ?? null,
+      tagline: input.draft.tagline.slice(0, 200),
+      about_html: stripScripts(input.draft.about_html).slice(0, 5000),
+      how_it_works: input.draft.how_it_works.slice(0, 6).map((s, i) => ({
+        step: i + 1,
+        title: String(s.title).slice(0, 80),
+        body: String(s.body).slice(0, 280),
+      })),
+      faqs: input.draft.faqs.slice(0, 8).map((f) => ({
+        q: String(f.q).slice(0, 200),
+        a: String(f.a).slice(0, 1200),
+      })),
+      service_areas: input.draft.service_areas
+        .map((s) => String(s).slice(0, 60).trim())
+        .filter(Boolean)
+        .slice(0, 12),
+      ai_drafted_at: new Date().toISOString(),
+    })
+    .eq("user_id", user.id)
+    .select("*")
+    .single();
+
+  if (error) return { error: error.message };
+
+  // Optionally create the suggested packages as real shop listings. Skipped
+  // when the seller already has shop_items so we don't duplicate.
+  let listingsCreated = 0;
+  const shouldCreate = input.createListings ?? true;
+  if (shouldCreate) {
+    const { data: existing } = await supabase
+      .from("nexgigs_shop_items")
+      .select("id")
+      .eq("seller_id", user.id)
+      .eq("is_active", true)
+      .limit(1);
+
+    if (!existing || existing.length === 0) {
+      const rows = input.draft.suggested_packages.slice(0, 5).map((pkg) => ({
+        seller_id: user.id,
+        title: pkg.title.slice(0, 200),
+        description: pkg.description.slice(0, 2000),
+        category: industryToCategory(input.draft.industry),
+        price: Math.max(0.5, Math.min(50000, pkg.price)),
+        listing_type: pkg.listing_type,
+        item_type: pkg.listing_type === "product" ? "physical" : "digital",
+        recurring_interval: pkg.recurring_interval ?? null,
+        location_type: "at_customer",
+        is_active: true,
+        refund_policy: "no_refunds",
+        meetup_city: null,
+      }));
+
+      if (rows.length > 0) {
+        const { error: insertErr, count } = await supabase
+          .from("nexgigs_shop_items")
+          .insert(rows, { count: "exact" });
+        if (!insertErr) listingsCreated = count ?? rows.length;
+      }
+    }
+  }
+
+  // Best-effort: also seed the user's profile business_name if it's empty.
+  await supabase
+    .from("nexgigs_profiles")
+    .update({ business_name: input.draft.business_name.slice(0, 120) })
+    .eq("id", user.id)
+    .is("business_name", null)
+    .then(() => null, () => null);
+
+  await logAuditEvent(user.id, "storefront.draft_created", "storefront", data.id, {
+    via: "ai_wizard",
+    listingsCreated,
+  }).catch(() => null);
+
+  return { storefront: data as Storefront, listingsCreated };
+}
+
+function industryToCategory(industry: StorefrontIndustry): string {
+  const map: Record<StorefrontIndustry, string> = {
+    service: "Home & Yard",
+    clothing: "Creative & Digital",
+    food: "Food & Cooking",
+    coaching: "Education & Tutoring",
+    maker: "Creative & Digital",
+    events: "Events",
+    wellness: "Fitness & Wellness",
+    tech: "Technology & IT",
+    other: "Personal Errands",
+  };
+  return map[industry] ?? "Personal Errands";
+}
+
+/**
  * Move a storefront back to draft (hides it from `/store/<slug>`).
  */
 export async function unpublishStorefront(): Promise<{
