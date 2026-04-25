@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import {
   getStorefrontPublicView,
   type StorefrontSection,
 } from "@/lib/actions/storefronts";
 import { StorefrontTheme } from "@/components/storefront/StorefrontTheme";
+import { OwnerToolbar } from "@/components/storefront/OwnerToolbar";
 import { HeroSection } from "@/components/storefront/sections/HeroSection";
 import { PackagesSection } from "@/components/storefront/sections/PackagesSection";
 import { AboutSection } from "@/components/storefront/sections/AboutSection";
@@ -52,12 +55,30 @@ export default async function StorefrontPage({ params }: PageProps) {
   if (!view) notFound();
   const { storefront, businessName, packages } = view;
 
+  // Owner detection: only show the owner toolbar if the current viewer
+  // signed in is the user_id who owns this storefront row. RLS already
+  // gates draft visibility, so this just decides whether to render the
+  // edit/share affordance.
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = Boolean(user && user.id === storefront.user_id);
+
+  // Build the absolute share URL from the request headers (so copy-link
+  // works correctly across local dev / preview deploys / production).
+  const h = headers();
+  const protocol = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("host") ?? "nexgigs.com";
+  const storeUrl = `${protocol}://${host}/store/${params.slug}`;
+
   return (
     <StorefrontTheme
       brandColor={storefront.brand_color}
       accentColor={storefront.accent_color}
       className="min-h-screen bg-black"
     >
+      {isOwner && (
+        <OwnerToolbar storeUrl={storeUrl} status={storefront.status} />
+      )}
       <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {storefront.sections.map((section) =>
           renderSection(section, { view, packages }),

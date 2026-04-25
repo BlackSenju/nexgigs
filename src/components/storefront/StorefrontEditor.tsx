@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ExternalLink,
   Eye,
   EyeOff,
   Loader2,
@@ -189,11 +188,10 @@ export function StorefrontEditor({ initialStorefront }: StorefrontEditorProps) {
             </Link>
             <Link
               href={`/store/${storefront.slug}`}
-              target="_blank"
               className="hidden sm:inline-flex items-center gap-1 text-sm text-zinc-300 hover:text-white"
+              title="View your storefront in the same tab"
             >
               View live
-              <ExternalLink className="w-3.5 h-3.5" />
             </Link>
             <button
               type="button"
