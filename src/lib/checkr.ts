@@ -74,17 +74,22 @@ export async function createBackgroundCheck(input: {
 /**
  * Verify a Checkr webhook signature.
  *
- * Checkr signs webhooks using HMAC-SHA256 of the raw request body
- * with your `CHECKR_WEBHOOK_SECRET`. The hex digest is sent in the
- * `X-Checkr-Signature` header.
+ * Per Checkr's docs (https://docs.checkr.com/#tag/Webhooks):
+ *   "The hash signature is generated with the HMAC algorithm, using
+ *    your API key as a key and SHA256 digest mode."
  *
- * Reference: https://docs.checkr.com/#tag/Webhooks
+ * That is, Checkr does NOT issue a separate webhook signing secret —
+ * the same `CHECKR_API_KEY` we use for HTTP Basic auth on the API also
+ * serves as the HMAC key. We accept an optional `CHECKR_WEBHOOK_SECRET`
+ * override only for environments that explicitly want to decouple the
+ * two (e.g. testing with a forged secret); the default behavior matches
+ * what Checkr actually sends in production.
  */
 export async function verifyCheckrWebhook(
   rawBody: string,
   signature: string | null
 ): Promise<boolean> {
-  const secret = process.env.CHECKR_WEBHOOK_SECRET;
+  const secret = process.env.CHECKR_WEBHOOK_SECRET ?? process.env.CHECKR_API_KEY;
   if (!secret || !signature) return false;
 
   const { createHmac, timingSafeEqual } = await import("crypto");
