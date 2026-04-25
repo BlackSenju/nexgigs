@@ -41,6 +41,8 @@ type ShopItem = {
   total_sold: number;
   created_at: string;
   seller_id: string;
+  seller_kind: "personal" | "business" | null;
+  business_id: string | null;
   seller: {
     id: string;
     first_name: string;
@@ -48,6 +50,11 @@ type ShopItem = {
     avatar_url: string | null;
     city: string;
     state: string;
+  } | null;
+  business: {
+    id: string;
+    slug: string;
+    name: string;
   } | null;
 };
 
@@ -100,7 +107,8 @@ function ShopItemPageInner() {
         .from("nexgigs_shop_items")
         .select(`
           *,
-          seller:nexgigs_profiles!seller_id(id, first_name, last_initial, avatar_url, city, state)
+          seller:nexgigs_profiles!seller_id(id, first_name, last_initial, avatar_url, city, state),
+          business:nexgigs_businesses!business_id(id, slug, name)
         `)
         .eq("id", params.id as string)
         .single();
@@ -143,9 +151,26 @@ function ShopItemPageInner() {
         ? item.price_premium
         : item.price;
 
+  // If this listing belongs to a published business storefront, show a
+  // strong back-to-storefront link instead of the generic BackButton so
+  // visitors stay anchored in the seller's brand context.
+  const fromBusiness =
+    item.seller_kind === "business" && item.business
+      ? { slug: item.business.slug, name: item.business.name }
+      : null;
+
   return (
     <div className="max-w-lg mx-auto px-4 py-4">
-      <BackButton fallbackHref="/shop" />
+      {fromBusiness ? (
+        <Link
+          href={`/store/${fromBusiness.slug}`}
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-300 hover:text-white mb-3"
+        >
+          ← Back to <span className="font-bold">{fromBusiness.name}</span>
+        </Link>
+      ) : (
+        <BackButton fallbackHref="/shop" />
+      )}
 
       {/* Image */}
       {item.image_url ? (
