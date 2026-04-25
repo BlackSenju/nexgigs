@@ -38,6 +38,7 @@ type NotificationEvent =
   | "background_checked"
   | "subscription_upgraded"
   | "dispute_opened"
+  | "storefront_published"
   | "security_alert";
 
 function getEmbedForEvent(
@@ -185,6 +186,19 @@ function getEmbedForEvent(
         timestamp,
       };
 
+    case "storefront_published":
+      return {
+        title: "Storefront Published",
+        description: `New seller storefront went live: \`${data.slug}\``,
+        color: COLORS.green,
+        fields: [
+          { name: "Industry", value: String(data.industry ?? "—"), inline: true },
+          { name: "User", value: String(data.user ?? "unknown"), inline: true },
+        ],
+        footer: { text: "NexGigs Storefronts" },
+        timestamp,
+      };
+
     default:
       return {
         title: String(event),
@@ -216,6 +230,7 @@ const EVENT_CHANNEL_MAP: Record<NotificationEvent, WebhookChannel> = {
   background_checked: "signups",
   subscription_upgraded: "payments",
   dispute_opened: "security",
+  storefront_published: "signups",
   security_alert: "security",
 };
 
