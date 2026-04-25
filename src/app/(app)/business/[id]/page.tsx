@@ -20,6 +20,28 @@ import { BackButton } from "@/components/ui/back-button";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { getBusinessProfile, getBusinessListings } from "@/lib/actions/business";
 
+/**
+ * Defense-in-depth check before rendering a user-supplied URL as an `href`.
+ * The server-side validator in updateBusinessProfile already blocks
+ * non-http(s) protocols, but stale rows or future code paths might not —
+ * so we never trust the stored value at render time. Returns the URL if
+ * safe, or null to skip rendering the link entirely.
+ */
+function safeWebsiteHref(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    // Not a valid URL — most commonly a missing protocol. Don't link.
+  }
+  return null;
+}
+
 interface BusinessProfile {
   id: string;
   first_name: string | null;
@@ -184,9 +206,9 @@ export default function BusinessProfilePage() {
               )}
             </div>
 
-            {profile.business_website && (
+            {profile.business_website && safeWebsiteHref(profile.business_website) && (
               <a
-                href={profile.business_website}
+                href={safeWebsiteHref(profile.business_website)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm text-brand-orange hover:underline mt-1"
