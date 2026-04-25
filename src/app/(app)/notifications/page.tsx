@@ -89,9 +89,38 @@ export default function NotificationsPage() {
         )
       );
     }
-    if (notification.link) {
+    if (notification.link && isSafeInternalLink(notification.link)) {
       router.push(notification.link);
     }
+  }
+
+  /**
+   * Only follow notification.link values that point at an allowed first-party
+   * route. Refuses absolute URLs (`http://...`, `//evil.com`), `javascript:`
+   * URIs, and protocol-relative URLs. The `link` value lives in Supabase and
+   * could be set by a compromised account or future RLS gap; treating it as
+   * untrusted by default closes the open-redirect surface.
+   */
+  function isSafeInternalLink(link: string): boolean {
+    if (typeof link !== "string" || link.length === 0) return false;
+    if (!link.startsWith("/")) return false;       // must be absolute path
+    if (link.startsWith("//")) return false;        // protocol-relative URL
+    if (link.startsWith("/\\")) return false;       // backslash trick
+    const ALLOWED = [
+      "/dashboard",
+      "/jobs",
+      "/gigs",
+      "/messages",
+      "/profile",
+      "/shop",
+      "/notifications",
+      "/applications",
+      "/business",
+      "/onboarding",
+      "/verify",
+      "/settings",
+    ];
+    return ALLOWED.some((p) => link === p || link.startsWith(`${p}/`) || link.startsWith(`${p}?`));
   }
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
