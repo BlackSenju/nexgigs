@@ -40,6 +40,8 @@ type AuditAction =
   | "storefront.draft_created"
   | "storefront.published"
   | "storefront.unpublished"
+  | "business.created"
+  | "business.updated"
   | "admin.action";
 
 export async function logAuditEvent(

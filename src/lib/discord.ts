@@ -39,6 +39,7 @@ type NotificationEvent =
   | "subscription_upgraded"
   | "dispute_opened"
   | "storefront_published"
+  | "business_created"
   | "security_alert";
 
 function getEmbedForEvent(
@@ -199,6 +200,20 @@ function getEmbedForEvent(
         timestamp,
       };
 
+    case "business_created":
+      return {
+        title: "New Business Pending Review",
+        description: `**${data.name}** (\`${data.slug}\`) was just created and is awaiting admin approval.`,
+        color: COLORS.blue,
+        fields: [
+          { name: "Owner", value: String(data.owner ?? "unknown"), inline: true },
+          { name: "City", value: String(data.city || "—"), inline: true },
+          { name: "State", value: String(data.state || "—"), inline: true },
+        ],
+        footer: { text: "NexGigs Businesses · Approve via admin panel" },
+        timestamp,
+      };
+
     default:
       return {
         title: String(event),
@@ -231,6 +246,7 @@ const EVENT_CHANNEL_MAP: Record<NotificationEvent, WebhookChannel> = {
   subscription_upgraded: "payments",
   dispute_opened: "security",
   storefront_published: "signups",
+  business_created: "signups",
   security_alert: "security",
 };
 
