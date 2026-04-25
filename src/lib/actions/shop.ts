@@ -153,7 +153,8 @@ export async function getShopListings(filters?: {
     .from("nexgigs_shop_items")
     .select(`
       *,
-      seller:nexgigs_profiles!seller_id(id, first_name, last_initial, avatar_url, city, state)
+      seller:nexgigs_profiles!seller_id(id, first_name, last_initial, avatar_url, city, state),
+      business:nexgigs_businesses!business_id(id, slug, name, logo_url)
     `)
     .eq("is_active", true)
     .order("created_at", { ascending: false });

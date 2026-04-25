@@ -25,7 +25,10 @@ type ShopItem = {
   category: string;
   total_sold: number;
   created_at: string;
+  seller_kind: "personal" | "business" | null;
+  business_id: string | null;
   seller: { id: string; first_name: string; last_initial: string; avatar_url: string | null; city: string; state: string } | null;
+  business: { id: string; slug: string; name: string; logo_url: string | null } | null;
 };
 
 export default function ShopPage() {
@@ -136,7 +139,17 @@ export default function ShopPage() {
                   <h3 className="text-sm font-bold text-white leading-tight line-clamp-2">
                     {item.title}
                   </h3>
-                  {item.seller && (
+                  {item.seller_kind === "business" && item.business ? (
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      <span
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/store/${item.business!.slug}`; }}
+                        className="hover:text-brand-orange transition-colors cursor-pointer font-semibold text-zinc-300"
+                      >
+                        {item.business.name}
+                      </span>
+                      {item.seller?.city ? ` · ${item.seller.city}` : ""}
+                    </p>
+                  ) : item.seller ? (
                     <p className="text-xs text-zinc-500 mt-0.5">
                       <span
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/shop/seller/${item.seller!.id}`; }}
@@ -146,7 +159,7 @@ export default function ShopPage() {
                       </span>
                       {item.seller.city ? ` · ${item.seller.city}` : ""}
                     </p>
-                  )}
+                  ) : null}
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-base font-black text-white">${item.price}</span>
                     {item.total_sold > 0 && (
