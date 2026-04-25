@@ -42,15 +42,26 @@ export async function getJobs(filters?: {
     query = query.eq("state", filters.state.toUpperCase());
   }
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
-    );
+    // Sanitize before interpolating into a PostgREST `or()` filter string.
+    // PostgREST treats `,`, `(`, `)`, and `:` as control characters inside
+    // these expressions; without scrubbing them an attacker could escape the
+    // `or()` clause and inject additional filter conditions (e.g. dropping
+    // the `status='open'` constraint to reveal cancelled or hidden jobs).
+    // We also cap length so a giant search string can't blow up the URL.
+    const safe = filters.search
+      .replace(/[(),:*\\]/g, " ")
+      .trim()
+      .slice(0, 100);
+    if (safe.length > 0) {
+      query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+    }
   }
-  if (filters?.limit) {
-    query = query.limit(filters.limit);
-  } else {
-    query = query.limit(50);
-  }
+  // Cap caller-controlled limit to prevent dumping the entire jobs table.
+  const requestedLimit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(Math.floor(filters.limit), 100)
+      : 50;
+  query = query.limit(requestedLimit);
 
   const { data, error } = await query;
   if (error) return { jobs: [], error: error.message };
