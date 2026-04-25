@@ -40,17 +40,21 @@ export function IdentitySwitcher({ personalLabel }: IdentitySwitcherProps) {
   const [busy, setBusy] = useState(false);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [active, setActive] = useState<ActiveIdentity>({ kind: "personal" });
-  const [loaded, setLoaded] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
-    const [a, b] = await Promise.all([
-      getActiveIdentity(),
-      getMyBusinesses(),
-    ]);
-    setActive(a);
-    setBusinesses(b.businesses);
-    setLoaded(true);
+    try {
+      const [a, b] = await Promise.all([
+        getActiveIdentity(),
+        getMyBusinesses(),
+      ]);
+      setActive(a);
+      setBusinesses(b.businesses);
+    } catch (err) {
+      // Don't let a transient server error make the switcher disappear —
+      // we render with default (personal) state instead.
+      console.error("[IdentitySwitcher] refresh failed:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -72,7 +76,9 @@ export function IdentitySwitcher({ personalLabel }: IdentitySwitcherProps) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  if (!loaded) return null; // avoid flash of empty button
+  // Always render the pill — never disappear silently. While loading,
+  // show the personal label as a placeholder; once businesses load the
+  // dropdown gets populated.
 
   const activeBusinessId =
     active.kind === "business" ? active.businessId : null;
