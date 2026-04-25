@@ -75,6 +75,15 @@ export function Navbar() {
               >
                 Post a Job
               </Link>
+              <Link
+                href="/dashboard/storefront"
+                className="text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5"
+              >
+                Storefront
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-orange/20 text-brand-orange font-bold border border-brand-orange/30">
+                  NEW
+                </span>
+              </Link>
             </div>
           )}
 
