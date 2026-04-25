@@ -85,22 +85,48 @@ export async function getPersonaInquiry(inquiryId: string): Promise<{
 
 /**
  * Verify a Persona webhook signature.
+ *
+ * Persona sends the signature header as `t=<unix-seconds>,v1=<hex-hmac>`.
+ * The HMAC is SHA-256 of `<timestamp>.<raw-body>` keyed by
+ * `PERSONA_WEBHOOK_SECRET`. We compare in constant time.
+ *
+ * Reference: https://docs.withpersona.com/docs/webhooks#verifying-webhooks
  */
 export async function verifyPersonaWebhook(
   payload: string,
-  signature: string
+  header: string | null
 ): Promise<boolean> {
   const secret = process.env.PERSONA_WEBHOOK_SECRET;
-  if (!secret) return false;
+  if (!secret || !header) return false;
 
-  // Persona uses HMAC-SHA256
+  // Persona's header format:
+  //   single sig:  `t=<unix>,v1=<hex>`
+  //   during rotation: `t=<unix>,v1=<hex> v1=<hex>` (space-separated)
+  // We need to accept ANY matching v1 to support zero-downtime secret rotation.
+  let timestamp: string | null = null;
+  const v1Sigs: string[] = [];
+  for (const segment of header.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean)) {
+    const [k, v] = segment.split("=", 2);
+    if (k === "t" && !timestamp) timestamp = v ?? null;
+    if (k === "v1" && v) v1Sigs.push(v);
+  }
+  if (!timestamp || v1Sigs.length === 0) return false;
+
+  // Reject signatures older than 5 minutes to limit replay window
+  const ageSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
+  if (!Number.isFinite(ageSeconds) || ageSeconds > 300 || ageSeconds < -60) {
+    return false;
+  }
+
   const { createHmac, timingSafeEqual } = await import("crypto");
   const expected = createHmac("sha256", secret)
-    .update(payload)
+    .update(`${timestamp}.${payload}`)
     .digest("hex");
+  const expectedBuf = Buffer.from(expected);
 
-  return timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  return v1Sigs.some((sig) => {
+    const sigBuf = Buffer.from(sig);
+    if (sigBuf.length !== expectedBuf.length) return false;
+    return timingSafeEqual(expectedBuf, sigBuf);
+  });
 }
