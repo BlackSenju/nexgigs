@@ -44,7 +44,10 @@ export type BusinessType =
   | "other";
 
 const HTTP_RE = /^https?:\/\//i;
-export const ACTIVE_IDENTITY_COOKIE = "nexgigs_active_identity";
+// Cookie name is intentionally NOT exported — "use server" files can only
+// export async functions. The constant is only read/written inside this
+// module (getActiveIdentity / setActiveIdentity).
+const ACTIVE_IDENTITY_COOKIE = "nexgigs_active_identity";
 
 /**
  * The identity the user is currently acting as. "personal" means their own

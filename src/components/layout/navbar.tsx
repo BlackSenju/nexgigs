@@ -77,7 +77,7 @@ export function Navbar() {
                 Post a Job
               </Link>
               <Link
-                href="/dashboard/storefront"
+                href="/storefront"
                 className="text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5"
               >
                 Storefront

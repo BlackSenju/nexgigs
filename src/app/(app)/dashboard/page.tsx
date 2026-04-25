@@ -227,7 +227,7 @@ export default async function DashboardPage() {
             <p className="mt-0.5 text-xs text-zinc-400">Buy and sell products & services</p>
           </div>
         </Link>
-        <Link href="/dashboard/storefront">
+        <Link href="/storefront">
           <div className="p-4 rounded-xl border border-brand-orange/40 bg-gradient-to-br from-brand-orange/10 to-card hover:border-brand-orange transition-colors cursor-pointer relative">
             <Store className="w-5 h-5 text-brand-orange mb-2" />
             <div className="flex items-center gap-1.5">
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
                 NEW
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-zinc-400">Build your branded business page</p>
+            <p className="mt-0.5 text-xs text-zinc-400">View and edit your branded business page</p>
           </div>
         </Link>
         <Link href="/rewards">
