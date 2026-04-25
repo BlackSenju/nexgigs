@@ -36,12 +36,18 @@ export async function updateBusinessProfile(input: {
     return { error: "Invalid team size" };
   }
 
-  // Validate website URL format if provided
+  // Validate website URL format if provided. We must explicitly check the
+  // protocol — `new URL("javascript:alert(1)")` parses successfully and
+  // would otherwise sail through. Only http(s) is allowed.
   if (input.businessWebsite) {
+    let parsed: URL;
     try {
-      new URL(input.businessWebsite);
+      parsed = new URL(input.businessWebsite);
     } catch {
       return { error: "Invalid website URL. Include https://" };
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { error: "Website must use http:// or https://" };
     }
   }
 
