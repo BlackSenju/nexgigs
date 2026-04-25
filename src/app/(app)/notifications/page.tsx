@@ -21,6 +21,43 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Only follow notification.link values that point at an allowed first-party
+ * route. Refuses absolute URLs (`http://...`, `//evil.com`), `javascript:`
+ * URIs, and protocol-relative URLs. The `link` value lives in Supabase and
+ * could be set by a compromised account or future RLS gap; treating it as
+ * untrusted by default closes the open-redirect surface.
+ *
+ * Allowlist must include every prefix used by `sendNotification` callers.
+ * Today: /gigs (applications.ts), /jobs/<id> (jobs.ts), /support (support.ts).
+ * Plus general app shell routes the notification UI may link to.
+ */
+const ALLOWED_NOTIFICATION_PREFIXES = [
+  "/dashboard",
+  "/jobs",
+  "/gigs",
+  "/messages",
+  "/profile",
+  "/shop",
+  "/notifications",
+  "/applications",
+  "/business",
+  "/onboarding",
+  "/verify",
+  "/settings",
+  "/support",
+];
+
+function isSafeInternalLink(link: string): boolean {
+  if (typeof link !== "string" || link.length === 0) return false;
+  if (!link.startsWith("/")) return false;       // must be absolute path
+  if (link.startsWith("//")) return false;        // protocol-relative URL
+  if (link.startsWith("/\\")) return false;       // backslash trick
+  return ALLOWED_NOTIFICATION_PREFIXES.some(
+    (p) => link === p || link.startsWith(`${p}/`) || link.startsWith(`${p}?`)
+  );
+}
+
 interface Notification {
   id: string;
   type: string;
@@ -89,7 +126,7 @@ export default function NotificationsPage() {
         )
       );
     }
-    if (notification.link) {
+    if (notification.link && isSafeInternalLink(notification.link)) {
       router.push(notification.link);
     }
   }

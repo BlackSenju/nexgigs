@@ -29,17 +29,18 @@ export async function GET() {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  // Collect config info (without leaking secrets)
+  // Collect config info — presence-only, no secret material.
+  // Discord webhook URLs are themselves the secret: anyone holding the URL
+  // can post to the channel. Even a 40-char prefix exposes the full webhook
+  // ID and a usable portion of the token in many cases. We previously
+  // returned that prefix in this admin endpoint — replaced with a plain
+  // SET / NOT SET indicator.
   const config = {
     ADMIN_EMAIL: process.env.ADMIN_EMAIL
       ? process.env.ADMIN_EMAIL.replace(/(.{2}).*@/, "$1***@")
       : "NOT SET",
-    DISCORD_WEBHOOK_SIGNUPS: process.env.DISCORD_WEBHOOK_SIGNUPS
-      ? "SET (" + process.env.DISCORD_WEBHOOK_SIGNUPS.slice(0, 40) + "...)"
-      : "NOT SET",
-    DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL
-      ? "SET (" + process.env.DISCORD_WEBHOOK_URL.slice(0, 40) + "...)"
-      : "NOT SET",
+    DISCORD_WEBHOOK_SIGNUPS: process.env.DISCORD_WEBHOOK_SIGNUPS ? "SET" : "NOT SET",
+    DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL ? "SET" : "NOT SET",
     RESEND_API_KEY: process.env.RESEND_API_KEY ? "SET" : "NOT SET",
   };
 
