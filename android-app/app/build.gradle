@@ -26,12 +26,24 @@ android {
         ]
     }
 
+    // Upload-key secrets live in the gitignored android-app/keystore.properties
+    // (or NEXGIGS_* env vars in CI). Never put passwords back in this file:
+    // the repo is public. Note `bubblewrap update` regenerates this file.
+    def keystoreProps = new Properties()
+    def keystorePropsFile = rootProject.file('keystore.properties')
+    if (keystorePropsFile.exists()) {
+        keystorePropsFile.withInputStream { keystoreProps.load(it) }
+    }
+    def signingValue = { String key, String envName ->
+        keystoreProps.getProperty(key) ?: System.getenv(envName)
+    }
+
     signingConfigs {
         release {
-            storeFile file('../nexgigs.keystore')
-            storePassword 'REMOVED-SIGNING-PASSWORD'
-            keyAlias 'nexgigs'
-            keyPassword 'REMOVED-SIGNING-PASSWORD'
+            storeFile file(signingValue('storeFile', 'NEXGIGS_STORE_FILE') ?: '../nexgigs.keystore')
+            storePassword signingValue('storePassword', 'NEXGIGS_STORE_PASSWORD')
+            keyAlias signingValue('keyAlias', 'NEXGIGS_KEY_ALIAS') ?: 'nexgigs'
+            keyPassword signingValue('keyPassword', 'NEXGIGS_KEY_PASSWORD')
         }
     }
 
